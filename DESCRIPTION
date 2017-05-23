@@ -1,0 +1,18 @@
+Package: iloData
+Type: Package
+Title: Tools kit for ilo bulkdownload processing of labour force survey
+Version: 1.0.0
+Date: 2017-05-15
+Author: person("Bescond", "David", , "bescond@ilo.org", role = c("aut", "cre"))
+BugReports: https://github.com/dbescond/iloData/issues
+Description: The ILO / Statistics Department is developing a comprehensive
+    framework for bulk download collection and processing
+Depends:
+    R (>= 3.3.3)
+License: MIT + file LICENSE
+LazyData: true
+URL: https://github.com/dbescond/iloData
+VignetteBuilder: knitr
+NeedsCompilation: no
+Repository: CRAN
+RoxygenNote: 6.0.1
