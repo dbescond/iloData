@@ -27,15 +27,17 @@ Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Defi
 # STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
 for (i in 1:length(Mapping_File$NAME)){
 
-	X <- download_data_KOR(Mapping_File %>% slice(i))
+	print(paste0(i, '/ ', Mapping_File$NAME[i]))
+	X <- download_data_KOR(Mapping_File %>% slice(i), TIME_WAIT = 2) %>% mutate(OBS_VALUE = as.numeric(OBS_VALUE))
 
+	
 	print(paste0(Mapping_File$NAME[i], '/ download -> ', nrow(X)))
 
 	save(X,file = paste0(INPUT,Mapping_File$NAME[i],'.Rdata'))
 	
 	rm(X)
 	
-	print(i)
+	print(Mapping_File$NAME)
 	invisible(gc(reset = TRUE))
 
 }
@@ -96,7 +98,7 @@ REF_MAPPING <- REF_MAPPING %>% unite_('KEY_ILO', ref_key_ilo , remove = TRUE, se
 ref_key_ilo <-  paste(ref_key_ilo, collapse = '/')
 
 # clean
-REF_MAPPING <- REF_MAPPING %>% 	mutate_each(funs(gsub('&amp;','&', ., fixed = TRUE)), -KEY_ILO) 
+REF_MAPPING <- REF_MAPPING %>% 	mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) 
 
 #create key	of X in national language
 ref_key_nat <- X %>% slice(1) %>% select(-TIME_PERIOD, -OBS_VALUE) %>% colnames
@@ -106,7 +108,7 @@ ref <- c('KEY_ILO', ref_key_nat)
 REF_MAPPING <- REF_MAPPING %>% select_(.dots = ref) 
 
 
-# REF_MAPPING <- REF_MAPPING %>% rename(SEX = By.gender)
+# REF_MAPPING <- REF_MAPPING %>% rename(SEX = By_gender)
 My_list <- vector("list", length(2:ncol(REF_MAPPING)))
 
 
@@ -198,7 +200,7 @@ invisible(gc(reset = TRUE))
 REF <- levels(as.factor(substr(Y$SOURCE_CODE,1,2)))
 
 Y <- Y %>% # converge to ilostat format
-		as.tbl %>%  mutate(OBS_STATUS  =as.character(NA), NOTES_SOURCE_CODE = as.character(NA)) %>% 
+		as.tbl %>%  mutate(OBS_STATUS  =as.character(NA), NOTES_SOURCE_CODE = 'R1:3903') %>% 
 		as.tbl %>%  
 		select(	collection = COLLECTION_CODE,  
 				ref_area = COUNTRY_CODE, 

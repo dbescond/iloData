@@ -15,19 +15,28 @@ source(paste0( './do/CAN.BULK_functions.r'))
 MY_COLLECTION <- "STI" # "YEARLY" "EAPEP"  "YTHSTAT" "STI"
 Target <- 'CAN'
 
-Mapping_File <- readxl:::read_excel("./ReadME_CAN.xlsx", sheet="File")  %>% filter(!ID %in% NA) %>% as.data.frame
+Mapping_File <- readxl:::read_excel("./ReadME_CAN.xlsx", sheet="File")  %>% filter(!ID %in% NA) %>% filter(IsValidate %in% 'Yes') %>% select(-IsValidate) %>% as.data.frame
 Mapping_Definition <- readxl:::read_excel("ReadME_CAN.xlsx", sheet="Definition")  %>% filter(IsValidate %in% 'Yes') %>% select(-IsValidate)  %>% as.data.frame
 
 
+Sys.setenv(http_proxy="")
+Sys.setenv(https_proxy="")
+Sys.setenv(ftp_proxy="")
+getOption('timeout')
+options(timeout=4000)
 
 for (i in 1:length(Mapping_File$NAME)){
 
-test <- try( httr:::GET(Mapping_File$URL[i], httr:::write_disk(paste0('./input/',basename(Mapping_File$URL[i]) ), overwrite=TRUE)), silent = T)
+# test <- try( httr:::GET(Mapping_File$URL[i], httr:::write_disk(paste0('./input/',basename(Mapping_File$URL[i]) ), overwrite=TRUE)), silent = T)
+
+test <- try(	download.file(Mapping_File$URL[i], paste0('./input/',basename(Mapping_File$URL[i]))), silent = T)
 
 print(paste0(Mapping_File$NAME[i], '/ download -> ',test))
 rm(test)
 
 con <- unz(paste0('./input/',basename(Mapping_File$URL[i])), stringr::str_replace(basename(Mapping_File$URL[i]),'.zip' ,'.csv' ))
+
+
 ref <- readr::read_csv(con, col_names = TRUE, n_max = 1)
 ref <- paste0(rep('c', ncol(ref)), collapse = '')
 con <- unz(paste0('./input/',basename(Mapping_File$URL[i])), stringr::str_replace(basename(Mapping_File$URL[i]),'.zip' ,'.csv' ))
@@ -53,9 +62,9 @@ X[X$TYPEOFWORK%in%"Total employees","TYPEOFWORK"] <- "Both full- and part-time e
 X[X$INDUSTRY%in%c("Total employees, all industries","Total employees"),"INDUSTRY"] <- "Total employed, all industries"
 }
 
-if(Mapping_File$NAME[i]%in%c("02820118-eng","02820119-eng")){
+if(Mapping_File$NAME[i]%in%c("02820118-eng", '02820218-eng', '02820219-eng',"02820119-eng", '02820138-eng', '02820137-eng')){
 colnames(X)[colnames(X)%in%"GEO"] <- "GEOGRAPHY"
-colnames(X)[colnames(X)%in%"URBANRURAL"] <- "URBANANDRURAL"
+colnames(X)[colnames(X)%in% c("URBANRURAL", 'POPANDRURAL')] <- "URBANANDRURAL"
 }
 
 
@@ -182,7 +191,7 @@ My_REF <- My_Vlookup(My_REF,"ID","note_indicator",MY_MATRIX,"ID_PASS","note_indi
 
 
 My_REF$ID <- NA
-X <- My_REF
+X <- as.tbl(My_REF) %>% select(-ID)
 rm(My_REF,MY_MATRIX,MY_NEW,REF_MAPPING)
 save(X,file = paste('./input/',Mapping_File$ID[i],".Rdata",sep=""))
 rm(X)
@@ -193,11 +202,12 @@ print(Mapping_File$ID[i])
 }
 
 # STEP 3 Combined BY COUNTRY 
+Y <- NULL
 for (i in 1:length(Mapping_File$ID)){
 print(Mapping_File$ID[i])
 load(paste('./input/',Mapping_File$ID[i],".Rdata",sep=""))
 
-ifelse(i==1,Y <- X, Y <- rbind.fill(Y,X))
+Y <- bind_rows(Y, as.tbl(X))
 rm(X)
 invisible(gc(reset = TRUE))
 }
@@ -210,7 +220,10 @@ invisible(gc(reset = TRUE))
 REF <- levels(as.factor(substr(Y$source,1,2)))
 
 Y <- Y %>% 
-		as.tbl %>%  mutate(obs_status = as.character(NA),note_source = as.character(NA)) %>%
+		as.tbl %>%  
+		mutate(	obs_status  = as.character(NA), 
+				note_source = 'R1:3903', # add tag Bulk
+				obs_value = as.numeric(obs_value)) %>%
 		select(	collection,  
 				ref_area , 
 				source , 

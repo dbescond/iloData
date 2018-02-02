@@ -11,7 +11,6 @@
 #'	
 #' ## End(**Not run**)
 #' @export
-#' @rdname Micro_process
 #' 
 #' 
 
@@ -67,20 +66,23 @@ ASSIGN_ISO_CODE <- function (X) {
 
 ASSIGN_SURVEY_CODE <- function (X) {
   surveys <- ilo$code$cl_survey
+  surveys$code <- as.character(surveys$code)
   censuses <- surveys[str_detect(surveys$code,"AA:") , c("code", "label_en")] %>%
-    mutate(label_en = substr(label_en, 1, 3)) %>% 
+    mutate( label_en = substr(label_en, 1, 3)) %>% 
     rename( ref_area = label_en) %>%
     rename( source = code) %>%
+
     # this needs to be checked, as of 26/04/2017 there is no duplicates
     distinct(ref_area, .keep_all=TRUE)
   
-  X <- X %>% left_join(censuses, by="ref_area")
+  X <- X %>% left_join(censuses, by="ref_area") %>%
+    replace_na( list(source = "NEED_SOURCE!") )
 }
 
 
 
 ## **************************************************************************************
-# MAIN***** IMPORTANT, THE FUNCTION IS STRICT WITH RESPECT TO AGE CATEGORIES, DATA IS ONLY KEPT IF IT CAN BE UNAMBIGUOSLY MAPPED TO AGE_5YRBANDS
+# MAIN***** IMPORTANT, THE FUNCTION IS STRICT WITH RESPECT TO AGE CATEGORIES, IF THE DATA IS NOT REASONABLY MAPPED TO 5 YR BANDS THE AGGREGATE IS TAKEN
 # ***************************************************************************************
 
 REP_UNSD.CENSUS <- function (check = TRUE) {
@@ -113,15 +115,15 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
   X <- readxl:::read_excel(paste0('./input/', 'B07.xlsx'))
   colnames(X) <- colnames(X) %>% str_replace_all(' ', '')  
   colnames(X) <- colnames(X) %>% str_replace_all("'", "")  
-  X$Data <- as.integer(X$Data)
+  X <- X %>% mutate(Data = as.integer(Data))
   
   ### Processing 
-  Xp <- X %>% 
+  Xp <- X %>% mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>% 
     
     ## Avoiding duplicates
    
     # Choosing the ones with the maximum disagregation
-    group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+    group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note) %>%
     mutate(age_data_richness=n()) %>%
     ungroup() %>%
     group_by(Country, Ref.Year, Area, Sex) %>%
@@ -132,7 +134,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
     #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
     within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-    group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+    group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
     mutate(UNSD_sort=min(sort)) %>%
     ungroup() %>%
     group_by(Country, Ref.Year, Area, Sex, Var.1) %>%
@@ -165,6 +167,9 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
                      "Male" = "SEX_M",
                      "Female" = "SEX_F")
              ) %>%
+    # Addapting an error
+    mutate(Var.1 = if_else(ref_area=="MCO" & Var.1 == "Age: 45 - 64","Age: 45 - 49" ,Var.1)    ) %>%
+    
     mutate(classif1 =
              Var.1 %>%
              recode( "Age: 0 - 4"="AGE_5YRBANDS_Y00-04",
@@ -192,6 +197,10 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ) %>%
     
 
+    
+    
+    
+
 
     #Final formating issues
     mutate(classif2 =
@@ -205,7 +214,69 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
            obs_status="",
            note_classif="",
            note_indicator="",
-           note_source="R1:2474") 
+           note_source="R1:2474")  %>%
+  #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+  
+  
+  ##### To add the 16-19 group as 15-19 and a Footnote
+  
+  mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+    # To ensure uniqueness before using the non standard age band
+    mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+    group_by(ref_area, source, sex, classif2) %>%
+    mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+    ungroup() %>%
+    #
+    mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+    mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+    
+    ##### To add a cuttof in the oldest group, and add a note
+    ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+    ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+    ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+    # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+    # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+    #First we detect the problem
+    #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+    
+    mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+    mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+    mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+    group_by(ref_area, source, sex, classif2) %>%
+    mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+    mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+    ungroup()  %>%
+    mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+    # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+    mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+    mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+    mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+    mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+    
+    mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+    
+    mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+    
+    mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+    
+    #group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+    mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+    ungroup() %>%
+    select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+    gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+    filter( ! is.na(obs_value) ) %>%
+    mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+    select(Table:time, obs_value, obs_status:note_source)
+  
+  ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+  
+  
 
   ## Obtaining the actual AGE_5YRBANDS_YGE65 (When the format does not fit perfectly the 5 year constant bands until 100+)
   # Note: Only explained in detail this once! 
@@ -262,14 +333,34 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
           mutate(Test = sum(obs_value)) %>%
           ungroup() %>%
           mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-          mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+          mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
           filter(classif1 %in% age_groups) %>%
           distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
 
     #This removes cases when ANY of the target age categories is not defined (for instance 15-19 might not be defined if the country has another split)
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==15) 
+      filter(n==15) %>%
+      select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate( classif1 = if_else(classif1 == "AGE_5YRBANDS_TOTAL", "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
+    
+    
     # note, countries lost "BTN" "FSM" "MCO" "NCL" "PER" "QAT" "SMR" "TGO" "VNM"
   # **************************************************************************************************************
   
@@ -302,14 +393,28 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     
     
-    # ************************************* ONLY RUN AFTER CHECKING THAT THE TOTALS ARE CORRECT, as this substitutes the original data (with data generated during the Checks) *************************
+    # ************************************* ONLY RUN AFTER CHECKING THAT THE TOTALS ARE CORRECT, as this substitutes the original data  *************************
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) %>%
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) %>%
       left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
       mutate( obs_value.x = if_else(classif1 == "AGE_5YRBANDS_TOTAL", obs_value.y, obs_value.x )) %>% 
       select(-obs_value.y) %>%
       rename(obs_value = obs_value.x)
+    
+
+	
+	########################### DAVID mainipulation
+	
+	# delete sample tabulation, delete provisionnal data
+	
+	Xfinal <- Xfinal %>% filter(!RecordType %in% 'Census - de jure - sample tabulation', !Reliability %in% 'Provisional figure')
+	
+	
+	
+	
+	
+	
     
     saveRDS(Xfinal,paste0('./output/', 'POP_2POP_SEX_AGE_GEO_NB___FROM___B07.RDS'))
     # readRDS(paste0('./output/', 'POP_2POP_SEX_AGE_GEO_NB___FROM___B07.RDS'))
@@ -337,7 +442,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
      ## First format steps
-    Xp <- X %>% 
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>% 
       
       ## Only data that corresponds to ISCED (97)
       filter(str_detect(X$Var.4,"ISCED")) %>%
@@ -403,7 +508,68 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474")  %>%
+    
+    #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+    
+    
+    ##### To add the 16-19 group as 15-19 and a Footnote
+    
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+      mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+      mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+      
+      ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+      # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+      # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+      #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+      
+      mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+      mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+      mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+      mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+      ungroup()  %>%
+      mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+      mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+      ##group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+      mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+      #ungroup() %>%
+      select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+      gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+      filter( ! is.na(obs_value) ) %>%
+      mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+      select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
     
       ## Obtaining the actual AGE_5YRBANDS_YGE65
     # ************************************************************************************ (Not an explicit function --> refer to the same code above for more comments!)
@@ -453,7 +619,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
     
@@ -464,7 +630,29 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     #removing cases when ALL the age categories are not defined
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==11) 
+      filter(n==11) %>% select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
+    
     # note countries lost ARM	IRN	KGZ	LSO	MYT	MEX	PLW	CHE	THA	TKL	GBR	VNM
     # **************************************************************************************************************
     
@@ -481,7 +669,17 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    SampleTotals <- Xp %>%
+      group_by( ref_area,  sex, classif2, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
+    
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note)%>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, time, .keep_all=TRUE)
     
     saveRDS(Xfinal,paste0('./output/', 'POP_XWAP_SEX_AGE_EDU_NB___FROM___B15.RDS'))
     #readRDS(paste0('./output/', 'POP_XWAP_SEX_AGE_EDU_NB___FROM___B15.RDS'))
@@ -499,7 +697,11 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     age_groups <- c( "AGE_5YRBANDS_Y15-19", "AGE_5YRBANDS_Y20-24", "AGE_5YRBANDS_Y25-29", "AGE_5YRBANDS_Y30-34", "AGE_5YRBANDS_Y35-39", "AGE_5YRBANDS_Y40-44", "AGE_5YRBANDS_Y45-49", "AGE_5YRBANDS_Y50-54", "AGE_5YRBANDS_Y55-59", "AGE_5YRBANDS_Y60-64", "AGE_5YRBANDS_YGE65")
     
     ### Import
-    X <- readxl:::read_excel(paste0('./input/', 'B17.xlsx'))
+    X <- readxl:::read_excel(paste0('./input/', 'B17.xlsx'),      col_types = c("text", "text", "numeric", 
+                                                                                 "numeric", "text", "text", "text", 
+                                                                                 "text", "text", "text", "numeric", 
+                                                                                 "text", "text", "text", "text", "numeric", 
+                                                                                 "text"))
     colnames(X) <- colnames(X) %>% str_replace_all(' ', '')  
     colnames(X) <- colnames(X) %>% str_replace_all("'", "")  
     X$Data <- as.integer(X$Data)
@@ -508,12 +710,12 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>% 
+    Xp <- X %>% mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>% 
       ## Avoiding duplicates, only 3 countries with record duplicates 27/04/2017
 
       #Choosing UNSD sort
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex, Var.1, Var.4) %>%
@@ -565,6 +767,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              # notice that in this case there is very few totals, therefore it is removed from the categories
       ) %>%
       
+
       #Final formating issues
 
       mutate(classif2 =
@@ -590,7 +793,69 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474") %>%
+    
+   #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+      
+      
+    ##### To add the 16-19 group as 15-19 and a Footnote
+
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2, classif3) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+    mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+    mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+    
+    ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+    # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+    # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+    #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+    
+    mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+    mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+    mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+    group_by(ref_area, source, sex, classif2, classif3) %>%
+    mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+    mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+    ungroup()  %>%
+    mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+    # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+    mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+    mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+    mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+    mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+    #group_by(ref_area, source, sex, classif2, classif3, todrop1, todrop2, todrop3) %>%
+    mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+    ungroup() %>%
+    select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+    gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+    filter( ! is.na(obs_value) ) %>%
+    mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+    mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+    select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+
     
     ## Obtaining the actual AGE_5YRBANDS_YGE65
     # ************************************************************************************ (Not an explicit function --> refer to the same code above for more comments!)
@@ -639,18 +904,36 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>% 
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, classif3, time, .keep_all=TRUE)
-    
-    
-    
     
     
     #removing cases when ALL the age categories are not defined
     Xp <- Xp %>% left_join( Xp %>% group_by( ref_area,sex, classif2, classif3, time) %>% count(), by = c("ref_area","sex","classif2","classif3", "time"), copy = FALSE) %>%
                   filter(n == 11) %>%
                   select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2, classif3) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2", "classif3") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+      
+    
+    ############### End of AGGREGATE AGE BANDS
     
     Xp <- Xp %>%  left_join( Xp %>% group_by( ref_area,sex, classif1, classif2, time) %>% count(), by = c("ref_area","sex","classif1","classif2", "time"), copy = FALSE) %>%
                   filter(n == 3)
@@ -659,7 +942,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, classif3, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, classif3, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
     
     # The number of inactives have to be computed
     Xfinal <- Xfinal %>% spread(classif3,obs_value) %>%
@@ -667,10 +950,19 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
                 gather(classif3, obs_value, LMS_STATUS_EMP:LMS_STATUS_EIP ) %>%
                 filter(!is.na(obs_value))
     
-    ### Check, compare to the previous totals and the inactive category in this round of raw data (this second one will not match perfectly precisely beacuse of the odd categories)
+    SampleTotals <- Xfinal %>%
+      group_by( ref_area,  sex, classif2, classif3, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
     
-    #To develop
+    Xfinal <- Xfinal %>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "classif3" , "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -classif3, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, classif3, time, .keep_all=TRUE)
     
+
     
     ###
     saveRDS(Xfinal,paste0('./output/', 'POP_2WAP_SEX_AGE_GEO_LMS_NB___FROM___B17.RDS'))
@@ -701,12 +993,12 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
  
       # Choosing the ones with the maximum disagregation
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note) %>%
       mutate(age_data_richness=n()) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -717,7 +1009,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex, Var.1) %>%
@@ -789,8 +1081,69 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474")  %>%
 
+    
+    #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+    
+    
+    ##### To add the 16-19 group as 15-19 and a Footnote
+    
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+      mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+      mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+      
+      ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+      # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+      # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+      #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+      
+      mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+      mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+      mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+      mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+      ungroup()  %>%
+      mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+      mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+      #group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+      mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+      ungroup() %>%
+      select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+      gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+      filter( ! is.na(obs_value) ) %>%
+      mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+      select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
     
     ## Obtaining the actual AGE_5YRBANDS_YGE65
     # ************************************************************************************ (Not an explicit function --> refer to the same code above for more comments!)
@@ -840,7 +1193,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
     
@@ -851,7 +1204,28 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     #removing cases when ALL the age categories are not defined
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==11) 
+      filter(n==11) %>% select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
     # note countries lost ARM	IRN	KGZ	LSO	MYT	MEX	PLW	CHE	THA	TKL	GBR	VNM
     # **************************************************************************************************************
     
@@ -871,7 +1245,19 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
+    
+    SampleTotals <- Xfinal %>%
+      group_by( ref_area,  sex, classif2, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
+    
+    Xfinal <- Xfinal %>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, time, .keep_all=TRUE)
     
     saveRDS(Xfinal,paste0('./output/', 'EMP_2EMP_SEX_AGE_STE_NB___FROM___B42.RDS'))
     #readRDS(paste0('./output/', 'EMP_2EMP_SEX_AGE_STE_NB___FROM___B42.RDS'))
@@ -902,12 +1288,12 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
       
       # Choosing the ones with the maximum disagregation
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note) %>%
       mutate(age_data_richness=n()) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -918,7 +1304,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex, Var.1) %>%
@@ -1028,7 +1414,68 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474")  %>%
+    
+    #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+    
+    
+    ##### To add the 16-19 group as 15-19 and a Footnote
+    
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+      mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+      mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+      
+      ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+      # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+      # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+      #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+      
+      mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+      mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+      mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+      mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+      ungroup()  %>%
+      mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+      mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+      #group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+      mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+      ungroup() %>%
+      select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+      gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+      filter( ! is.na(obs_value) ) %>%
+      mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+      select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
     
     
     ## Obtaining the actual AGE_5YRBANDS_YGE65
@@ -1079,7 +1526,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
     
@@ -1087,7 +1534,28 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     #removing cases when ALL the age categories are not defined
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==11) 
+      filter(n==11) %>% select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
     # note countries lost ARM	IRN	KGZ	LSO	MYT	MEX	PLW	CHE	THA	TKL	GBR	VNM
     # **************************************************************************************************************
     
@@ -1098,7 +1566,19 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
+    
+    SampleTotals <- Xfinal %>%
+      group_by( ref_area,  sex, classif2, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
+    
+    Xfinal <- Xfinal %>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, time, .keep_all=TRUE)
     
     saveRDS(Xfinal,paste0('./output/', 'EMP_2EMP_SEX_AGE_ECO_NB___FROM___B43.RDS'))
     #readRDS(paste0('./output/', 'EMP_2EMP_SEX_AGE_ECO_NB___FROM___B43.RDS'))
@@ -1130,12 +1610,12 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
       
       # Choosing the ones with the maximum disagregation
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note) %>%
       mutate(age_data_richness=n()) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -1146,7 +1626,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex, Var.1) %>%
@@ -1238,7 +1718,68 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474")  %>%
+    
+    #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+    
+    
+    ##### To add the 16-19 group as 15-19 and a Footnote
+    
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+      mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+      mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+      
+      ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+      # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+      # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+      #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+      
+      mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+      mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+      mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+      mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+      ungroup()  %>%
+      mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+      mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+      #group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+      mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+      ungroup() %>%
+      select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+      gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+      filter( ! is.na(obs_value) ) %>%
+      mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+      select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
     
     
     ## Obtaining the actual AGE_5YRBANDS_YGE65
@@ -1289,7 +1830,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
     
@@ -1297,7 +1838,29 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     #removing cases when ALL the age categories are not defined
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==11) 
+      filter(n==11) %>% select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
+    
     # note countries lost ARM	IRN	KGZ	LSO	MYT	MEX	PLW	CHE	THA	TKL	GBR	VNM
     # **************************************************************************************************************
     
@@ -1308,7 +1871,19 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
+    
+    SampleTotals <- Xfinal %>%
+      group_by( ref_area,  sex, classif2, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
+    
+    Xfinal <- Xfinal %>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, time, .keep_all=TRUE)
     
     saveRDS(Xfinal,paste0('./output/', 'EMP_2EMP_SEX_AGE_OCU_NB___FROM___B44.RDS'))
     #readRDS(paste0('./output/', 'EMP_2EMP_SEX_AGE_OCU_NB___FROM___B44.RDS'))
@@ -1339,7 +1914,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
       
@@ -1347,7 +1922,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -1456,7 +2031,8 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
+
     
     saveRDS(Xfinal,paste0('./output/', 'EMP_2EMP_SEX_STE_ECO_NB___FROM___B45.RDS'))
     #readRDS(paste0('./output/', 'EMP_2EMP_SEX_STE_ECO_NB___FROM___B45.RDS'))    
@@ -1486,7 +2062,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>%mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
       
@@ -1494,7 +2070,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -1585,7 +2161,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
     
     saveRDS(Xfinal,paste0('./output/', 'EMP_2EMP_SEX_STE_OCU_NB___FROM___B46.RDS'))
     #readRDS(paste0('./output/', 'EMP_2EMP_SEX_STE_OCU_NB___FROM___B46.RDS'))
@@ -1614,12 +2190,12 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     ### Processing 
     
     ## First format steps
-    Xp <- X %>%
+    Xp <- X %>% mutate(Fnote= str_replace_all(X$Fnote,fixed(", ")," | " ) ) %>%
       
       ## Avoiding duplicates
       
       # Choosing the ones with the maximum disagregation
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note) %>%
       mutate(age_data_richness=n()) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex) %>%
@@ -1630,7 +2206,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       # Choosing the ones with the UNSD sort, BUT making sure we do not mix several combinations of the uniquely identifying combinations
       #i.e.Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote
       within( {sort = ave(Data,  FUN = seq_along)} ) %>%
-      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear, Fnote) %>%
+      group_by(Country, Series, Ref.Year, Area, Sex, RecordType,  Reliability, Cov.Note, SourceYear) %>%
       mutate(UNSD_sort=min(sort)) %>%
       ungroup() %>%
       group_by(Country, Ref.Year, Area, Sex, Var.1) %>%
@@ -1695,7 +2271,68 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
              obs_status="",
              note_classif="",
              note_indicator="",
-             note_source="R1:2474") 
+             note_source="R1:2474")  %>%
+    
+    #################################### DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
+    
+    
+    ##### To add the 16-19 group as 15-19 and a Footnote
+    
+    mutate( classif1 = if_else(Var.1 == "Age: 16 - 19", "pro_15_19", classif1)) %>%
+      # To ensure uniqueness before using the non standard age band
+      mutate( StandardAge15_19 = if_else(str_detect(classif1, "AGE_5YRBANDS_Y15-19"), 1, 0)  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MStandardAge15_19 = max(StandardAge15_19))  %>%
+      ungroup() %>%
+      #
+      mutate( note_classif = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "C6:1056", note_classif)) %>%
+      mutate( classif1 = if_else(classif1 == "pro_15_19" & MStandardAge15_19 ==0 , "AGE_5YRBANDS_Y15-19", classif1)) %>%
+      
+      ##### To add a cuttof in the oldest group, and add a note
+      ### notice TOTALS SHOULD NOT BE USED AS THEY IF SOMETHING MAKE THE PROBLEM WORSE
+      ### THE ONLY EXCEPTION IS WHEN WE DONT HAVE ANYTHING ELSE
+      ### BUT thinking that we can get 75+ from 15+ - 15/74 simply does not work! (inaccurate, or even negative results)
+      # basically, we have to trick the algorithm into thinking that the 8 groups contained in AGE_5YRBANDS_YGE65 are there an proper
+      # there is a bit of conceptual overlap with the 5yr bands function, nonetheless names are choosen to avoid any conflict
+      #First we detect the problem
+      #mutate( proMaximumCuttof = str_extract(Var.1,"_[^_]+$") )
+      
+      mutate( proMaximumInterval = as.integer( str_extract(Var.1,"[:alnum:]+$") ) ) %>%
+      mutate( proMaximumCuttof = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:]\\+$"),1,-3) )  ) %>%
+      mutate( proStartInterval = as.integer( str_sub(str_extract( Var.1,"[:alnum:]+[:blank:][^+]"),1,-2) )  ) %>%
+      group_by(ref_area, source, sex, classif2) %>%
+      mutate( MaximumInterval = max(proMaximumInterval, na.rm = TRUE) ) %>%
+      mutate( MaximumCuttof = max(proMaximumCuttof, na.rm = TRUE) ) %>%
+      ungroup()  %>%
+      mutate( FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      # exception for systematic omission ISRAEL FEMALE (I DO NOT TRUST THE TOTALS IN THIS CASE EITHER- FOR UNEMPLOYMENT SEEMS FINE BUT NOT MANY OTHER CASES)
+      mutate( EXCEPTION_FAKE_65_plus = if_else( (MaximumInterval > MaximumCuttof & MaximumInterval==64 & proMaximumInterval==64) , as.integer(0), NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus2 = if_else( ( is.na(MaximumCuttof) & proStartInterval>=65) , obs_value , NA_integer_ )    ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), FAKE_65_plus2 ,FAKE_65_plus)  ) %>%
+      mutate( FAKE_65_plus = if_else(is.na(FAKE_65_plus), EXCEPTION_FAKE_65_plus ,FAKE_65_plus)  ) %>%
+      
+      mutate (todrop1 = if_else((MaximumInterval > MaximumCuttof & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop2 = if_else(( is.na(MaximumCuttof) & proStartInterval >= 65), as.integer(1), NA_integer_) ) %>%
+      
+      mutate (todrop3 = if_else((MaximumInterval > MaximumCuttof & MaximumInterval == 64 & proMaximumInterval==64), as.integer(1), NA_integer_) ) %>%
+      
+      #group_by(ref_area, source, sex, classif2, todrop1, todrop2, todrop3) %>%
+      mutate( sFAKE_65_plus = (FAKE_65_plus) ) %>%  
+      ungroup() %>%
+      select( -FAKE_65_plus, -FAKE_65_plus2, -EXCEPTION_FAKE_65_plus, -todrop1, -todrop2, -todrop3, -StandardAge15_19, -MStandardAge15_19, -proMaximumInterval, -proMaximumCuttof, -proStartInterval, -MaximumCuttof  ) %>%
+      gather(pro_age, obs_value, -Table:-time, -obs_status:-note_source , -MaximumInterval) %>%
+      filter( ! is.na(obs_value) ) %>%
+      mutate( classif1 = if_else( pro_age == "sFAKE_65_plus", "Age: 65 +", classif1 )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==74 & note_classif == "", "C6:2320", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==75 & note_classif == "", "C6:1042", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==72 & note_classif == "", "C6:2281", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==69 & note_classif == "", "C6:2262", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & MaximumInterval==64 & note_classif == "", "C6:2351", note_classif )  ) %>%
+      mutate( note_classif = if_else ( pro_age == "sFAKE_65_plus" & note_classif == "", "C6:3045", note_classif )  ) %>%
+      select(Table:time, obs_value, obs_status:note_source)
+    
+    ############################# END OF : DEALING WITH VERY NON STANDARD AGE GROUPS  *************************************************************
     
     
     ## Obtaining the actual AGE_5YRBANDS_YGE65
@@ -1746,7 +2383,7 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
       mutate(Test = sum(obs_value)) %>%
       ungroup() %>%
       mutate(Test = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, as.integer(-100))) %>%
-      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>%
+      mutate( obs_value = if_else(classif1 == "AGE_5YRBANDS_YGE65", Test, obs_value) ) %>% select(- Test) %>%
       filter(classif1 %in% age_groups) %>%
       distinct(ref_area, sex, classif1, classif2, time, .keep_all=TRUE)
     
@@ -1754,7 +2391,29 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     #removing cases when ALL the age categories are not defined
     IncompleteCategories <- Xp %>% group_by( ref_area,sex, classif2, time) %>% count()
     Xp <- left_join(Xp, IncompleteCategories, by = c("ref_area","sex","classif2", "time"), copy = FALSE) %>%
-      filter(n==11) 
+      filter(n==11) %>% select(-n)
+    
+    ############# To CAPTURE AGGREGATE AGE BANDS
+    Xtodiscern <- Xp %>% distinct(ref_area, sex, classif2) %>% 
+      mutate( FlagToDrop = 1 )
+    XPotentialMisfit <- Xcopy 
+    XRealMisfits <- XPotentialMisfit %>% left_join(Xtodiscern, by = c("ref_area", "sex", "classif2") ) %>% 
+      filter( is.na(FlagToDrop) ) %>%
+      select(-FlagToDrop)
+    # Assigned to aggregate 	AGE_AGGREGATE_TOTAL, with appropiate notes
+    XToJoin <- XRealMisfits %>% 
+      mutate ( note_classif = if_else( classif1 == "Age: 16 +", "C6:1058", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 10 +", "C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 5 +", "C6:1636 | C6:2289", note_classif ) ) %>%
+      mutate ( note_classif = if_else( classif1 == "Age: 6 +", "C6:2296 | C6:2289", note_classif ) ) %>%
+      mutate( classif1 = if_else(classif1 == "Age: Total"|classif1 =="Age: 15 +"|classif1 =="Age: 16 +"|classif1 =="Age: 6 +"|classif1 =="Age: 10 +"|classif1 =="Age: 5 +" , "AGE_AGGREGATE_TOTAL", classif1) ) %>%
+      filter( classif1 == "AGE_AGGREGATE_TOTAL" )
+    
+    Xp <- rbind(Xp,XToJoin)
+    
+    
+    ############### End of AGGREGATE AGE BANDS
+    
     # note countries lost ARM	IRN	KGZ	LSO	MYT	MEX	PLW	CHE	THA	TKL	GBR	VNM
     # **************************************************************************************************************
     
@@ -1765,7 +2424,20 @@ REP_UNSD.CENSUS <- function (check = TRUE) {
     
     ### FINAL STEPS
     # remove auxiliar variables and select the totals computed, not the source ones
-    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source) 
+    Xfinal <- Xp %>% select(collection, ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status, note_classif, note_indicator, note_source, Fnote, RecordType, Reliability, Cov.Note) 
+    
+    SampleTotals <- Xfinal %>%
+      group_by( ref_area,  sex, classif2, time) %>%
+      summarise(obs_value=sum(obs_value)) %>%
+      ungroup() 
+    
+    Xfinal <- Xfinal %>%
+      left_join(SampleTotals, by = c("ref_area","sex","classif2", "time")) %>%
+      gather(pro_age, obs_value,-collection, -ref_area, -source, -indicator, -sex, -classif1, -classif2, -time, -obs_status, -note_classif, -note_indicator, -note_source) %>%
+      mutate(classif1=if_else(pro_age=="obs_value.x",classif1,"AGE_5YRBANDS_TOTAL") ) %>%
+      select(-pro_age) %>%
+      distinct(ref_area,  sex, classif1, classif2, time, .keep_all=TRUE)
+    
     
     saveRDS(Xfinal,paste0('./output/', 'EIP_2EIP_SEX_AGE_FUN_NB___FROM___B24.RDS'))
     #readRDS(paste0('./output/', 'EIP_2EIP_SEX_AGE_FUN_NB___FROM___B24.RDS'))

@@ -29,7 +29,7 @@ key 		<- c("COLLECTION_CODE","COUNTRY_CODE", "SOURCE_CODE", "INDICATOR_CODE","SE
 
 {
 
-URL <- 'http://www.stats.govt.nz/tools_and_services/releases_csv_files/csv-files-for-infoshare.aspx'
+URL <- 'http://archive.stats.govt.nz/tools_and_services/releases_csv_files/csv-files-for-infoshare.aspx'
 
 require(RSelenium)
 shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
@@ -68,7 +68,9 @@ test <- list.files("C:\\temp\\")
 test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.zip']
 file.rename(paste0("C:\\temp\\",test),paste0(INPUT, unique(Mapping_File$ZIP_NAME),'.zip'))
 
-
+setwd(INPUT)
+unzip(paste0(INPUT,unique(Mapping_File$ZIP_NAME),'.zip'))
+setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
 # STEP 1 CLEAN UP AND REDUCE ORIGINAL FILE
 
 
@@ -95,11 +97,16 @@ REF_ID <- unique(REF_ID[!REF_ID%in%NA])
 
 ##################################
 #################################
-ref <- readr::read_csv(paste0(INPUT,unique(Mapping_File$ZIP_NAME[i]),'.zip'), col_names = TRUE, n_max = 1, progress = FALSE)	
+
+
+ref_csvfile <- unzip(paste0(INPUT,unique(Mapping_File$ZIP_NAME[i]),'.zip'), list = TRUE) %>% select(Name) %>% filter(str_detect(Name, Mapping_File$NAME[i])) %>% t %>% as.character
+
+
+ref <- readr::read_csv(paste0(INPUT,ref_csvfile), col_names = TRUE, n_max = 1, progress = FALSE)	
 	
 ref <- paste0(rep('c', ncol(ref)), collapse = '')
 #con <- unz(paste0('C:/temp/',Mapping_File$ZIP_NAME[i],'.zip'), test$Name )
-X <- readr::read_csv(paste0(INPUT,unique(Mapping_File$ZIP_NAME[i]),'.zip'), col_types = ref,  col_names = TRUE, progress = FALSE)
+X <- readr::read_csv(paste0(INPUT,ref_csvfile), col_types = ref,  col_names = TRUE, progress = FALSE)
 rm(ref)
 
 
@@ -270,7 +277,8 @@ Y <- Y %>%
 				note_indicator = NOTES_INDICATOR_CODE, 
 				note_source = NOTES_SOURCE_CODE ) %>% 
 		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
-				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>% 
+				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time), 
+				note_source = 'R1:3903') %>% 
 		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
  
 

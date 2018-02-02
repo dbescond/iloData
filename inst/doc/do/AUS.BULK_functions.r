@@ -100,6 +100,11 @@ remDr$open()
 test <- list.files('C:\\temp')
 test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.zip']
 file.rename(paste0('C:\\temp\\',test),paste0(INPUT, NAME))
+
+remDr$close()
+remDr$closeServer()
+		Sys.sleep(5)
+rm(remDr, webElem) 
 }
 
 for (j in seq_along(XLS)){
@@ -110,10 +115,7 @@ for (j in seq_along(XLS)){
 # file.remove(paste0('C:/temp/',NAME))
 
 
-remDr$close()
-remDr$closeServer()
-		Sys.sleep(5)
-rm(remDr, webElem) 
+
 }	
 
 

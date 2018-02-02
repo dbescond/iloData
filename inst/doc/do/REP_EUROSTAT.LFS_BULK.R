@@ -4,6 +4,8 @@
 # Auteur: David Bescond ILO / Department of statistics
 # Date:  May 2010. last update May 2017
 #############################################################################
+require(plyr)
+require(dplyr)
 require(lubridate)
 require(Ariane,quietly =TRUE)
 require(stringr,quietly =TRUE)
@@ -44,10 +46,11 @@ X <- X	%>%	as.tbl %>%
 			cleanDf %>% 
 			mutate( time = ifelse(str_sub(time,5,5) %in% 'Q', paste0('Y', str_sub(time,1,4), '_Q0', str_sub(time,6,6)), time), 
 					time = ifelse(str_sub(time,5,5) %in% 'M', paste0('Y', str_sub(time,1,4), '_', str_sub(time,5,7)), time), 
-					time = ifelse(str_sub(time,5,5) %in% '', paste0('Y', str_sub(time,1,4)), time))
+					time = ifelse(str_sub(time,5,5) %in% '', paste0('Y', str_sub(time,1,4)), time), 
+					values = as.numeric(values))
 
 					
-if(i %in% 3:5)	{X <- X %>% mutate(var_unit = unit)}	
+if(i %in% c(3,4,5, 54, 55))	{X <- X %>% mutate(var_unit = unit)}	
 	X <- X %>% select(-one_of('unit'))		
 print(paste0(Mapping_File$NAME[i], '/ download -> ',nrow(X)))
 
@@ -87,6 +90,7 @@ X <- X %>% 	rename(	TIME_PERIOD = time, OBS_VALUE = values, OBS_STATUS = flags) 
 			filter(	!(OBS_VALUE%in%NA & OBS_STATUS%in%NA)) %>% 
 			mutate(	OBS_STATUS = ifelse(!OBS_STATUS %in% c("b","u","f"),NA,  OBS_STATUS), 
 					OBS_STATUS = ifelse(OBS_STATUS %in% 'f', 'u', OBS_STATUS)) %>% 
+			filter(	!(OBS_VALUE%in%NA & OBS_STATUS%in%NA)) %>% 
 			select_(.dots = c(header,"TIME_PERIOD","OBS_VALUE","OBS_STATUS")) %>%
 			as.data.frame
 			
@@ -104,6 +108,7 @@ invisible(gc(reset = TRUE))
 
 # STEP 2 MAP to ILO CODE
 for (i in 1:length(Mapping_File$NAME)){
+
 load(paste0("./input/",Mapping_File$NAME[i],".Rdata"))
 
 REF_MAPPING <- Mapping_Definition[Mapping_Definition$File%in%Mapping_File[i,"ID"],]
@@ -133,26 +138,29 @@ invisible(gc(reset = TRUE))
 j <- 1
 for (j in 1:nrow(REF_MAPPING)){
 
-MY_NEW[,2]<- REF_MAPPING[j,"INDICATOR_CODE/CLASSIF1_CODE/CLASSIF2_CODE"]
-MY_NEW[,3]<- REF_MAPPING[j,"NOTES_FREQUENCY_CODE"]
-MY_NEW[,4]<- REF_MAPPING[j,"NOTES_CLASSIF_CODE"]
-MY_NEW[,5]<- REF_MAPPING[j,"NOTES_INDICATOR_CODE"]
+	MY_NEW[,2]<- REF_MAPPING[j,"INDICATOR_CODE/CLASSIF1_CODE/CLASSIF2_CODE"]
+	MY_NEW[,3]<- REF_MAPPING[j,"NOTES_FREQUENCY_CODE"]
+	MY_NEW[,4]<- REF_MAPPING[j,"NOTES_CLASSIF_CODE"]
+	MY_NEW[,5]<- REF_MAPPING[j,"NOTES_INDICATOR_CODE"]
 
 
 
 
-for (k in 5:ncol(REF_MAPPING)){
-test <- levels(as.factor(unlist(strsplit(REF_MAPPING[j,colnames(REF_MAPPING)[k]],";"))))
-My_list[[k]] <- test
-}
-My_REF <- My_list[[5]]
+	for (k in 5:ncol(REF_MAPPING)){
 
-for(k in 6:ncol(REF_MAPPING)){
-My_REF <- paste(sort(rep(My_REF,length(My_list[[k]]))),My_list[[k]],sep=";")
-}
+		test <- levels(as.factor(unlist(strsplit(REF_MAPPING[j,colnames(REF_MAPPING)[k]],";"))))
+		My_list[[k]] <- test
 
-MY_MATRIX <-rbind(MY_MATRIX,
+	}
+	My_REF <- My_list[[5]]
+
+	for(k in 6:ncol(REF_MAPPING)){
+		My_REF <- paste(sort(rep(My_REF,length(My_list[[k]]))),My_list[[k]],sep=";")
+	}
+
+	MY_MATRIX <-rbind(MY_MATRIX,
 			MY_NEW[MY_NEW$ID_PASS%in%My_REF,colnames(MY_NEW)%in%c("ID_PASS","INDICATOR_CODE/CLASSIF1_CODE/CLASSIF2_CODE","geo","sex","NOTES_FREQUENCY_CODE","NOTES_CLASSIF_CODE","NOTES_INDICATOR_CODE","TIME_PERIOD","OBS_VALUE","OBS_STATUS")])
+
 }
 
 
@@ -223,7 +231,7 @@ invisible(gc(reset = TRUE))
 
 
 
-# STEP 3 DEVIDED BY COUNTRY and EXCEPTION
+# STEP 3 DIVIDED BY COUNTRY and EXCEPTION
 # mapping source and survey
 ReadMeSource <- read.xlsx(paste0("./ReadME_EUROSTAT.xlsx"), sheet="MappingSource")        
 REF <- as.vector(unique(ReadMeSource$COUNTRY_CODE))  
@@ -283,57 +291,62 @@ X <- X %>% mutate(	NOTES_CLASSIF_CODE = ifelse(SOURCE_CODE%in%"BE" & COUNTRY_COD
 # replace ISCO 08 by ISCO 88
 
 X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_TOTAL" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_TOTAL" , CLASSIF1_CODE) )
-
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_TOTAL" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_TOTAL"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_1" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_1"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_2" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_2"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_3" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_3"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_4" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_4"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_5" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_5"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_6" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_6"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_7" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_7"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_8" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_8"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_9" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_9"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_0" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_0"
-X[X$SOURCE_CODE%in%"BA" & X$CLASSIF1_CODE%in%"OCU_ISCO08_X" & as.numeric(substr(X$TIME_PERIOD,2,5))<2011,"CLASSIF1_CODE" ] <- "OCU_ISCO88_X"
-
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_1" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_1" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_2" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_2" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_3" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_3" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_4" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_4" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_5" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_5" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_6" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_6" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_7" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_7" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_8" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_8" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_9" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_9" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_0" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_0" , CLASSIF1_CODE) )
+X <- X %>% mutate(	CLASSIF1_CODE = ifelse(SOURCE_CODE%in%"BA" & CLASSIF1_CODE%in%"OCU_ISCO08_X" & as.numeric(substr(TIME_PERIOD,2,5)) < 2011 , "OCU_ISCO88_X" , CLASSIF1_CODE) )
 
 # add GEO classif break
-X[X$SOURCE_CODE%in%"BA" & substr(X$CLASSIF1_CODE,1,3)%in%c("GEO") & X$TIME_PERIOD%in%c("Y2012","Y2012_Q01","Y2012_M02"),"OBS_STATUS" ] <- "c"
+X <- X %>% mutate(	OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & str_sub(CLASSIF1_CODE,1,3) %in%"GEO" & TIME_PERIOD%in%c("Y2012","Y2012_Q01","Y2012_M02") , "c" , OBS_STATUS) )
+
 # add EDU classif break
-X[X$SOURCE_CODE%in%"BA" & substr(X$CLASSIF1_CODE,1,3)%in%c("EDU") & X$TIME_PERIOD%in%c("2014","Y2014_Q01","Y2014_M02"),"OBS_STATUS" ] <- "c"
+X <- X %>% mutate(	OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & str_sub(CLASSIF1_CODE,1,3) %in%"EDU" & TIME_PERIOD%in%c("2014","Y2014_Q01","Y2014_M02") , "c" , OBS_STATUS) )
 
 
-X <- X[!(X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"CHE" & substr(X$CLASSIF1_CODE,1,7)%in%"GEO_COV" & as.numeric(substr(X$TIME_PERIOD,2,5))<2010),]
-X <- X[!(X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"CZE" & substr(X$CLASSIF1_CODE,1,3)%in%c("AGE","GEO") & as.numeric(substr(X$TIME_PERIOD,2,5))<1998),]
+X <- X %>% filter(!(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"CHE" & str_sub(CLASSIF1_CODE,1,7) %in%"GEO_COV" & as.numeric(str_sub(TIME_PERIOD,2,5))<2010))
+X <- X %>% filter(!(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"CZE" & str_sub(CLASSIF1_CODE,1,3)%in%c("AGE","GEO") & as.numeric(str_sub(TIME_PERIOD,2,5))<1998))
+X <- X %>% filter(!(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"CYP" & as.numeric(str_sub(TIME_PERIOD,2,5))<2000))
 
-X <- X[!(X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"CYP" & as.numeric(substr(X$TIME_PERIOD,2,5))<2000),]
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+
+X <- X %>% mutate(OBS_VALUE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"FRA" & str_sub(TIME_PERIOD,6,6)%in%"", NA, OBS_VALUE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & NOTES_INDICATOR_CODE%in%"T2:84_T3:89", "T2:85_T3:89", NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:89", "T5:114_T2:85_T3:89", NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & NOTES_INDICATOR_CODE%in%"T2:84_T3:104", "T2:85_T3:104", NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:104", "T5:114_T2:85_T3:104", NOTES_INDICATOR_CODE))
 
 
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"FRA" & substr(X$TIME_PERIOD,6,6)%in%"","OBS_VALUE"] <- NA
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:89","NOTES_INDICATOR_CODE"] <- "T2:85_T3:89"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:104","NOTES_INDICATOR_CODE"] <- "T2:85_T3:104"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & X$CLASSIF1_CODE%in%c("AGE_AGGREGATE_15-24","AGE_10YRBANDS_Y15-24"),"NOTES_CLASSIF_CODE"] <- "C6:1058"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & X$CLASSIF1_CODE%in%"AGE_5YRBANDS_Y15-19","NOTES_CLASSIF_CODE"] <- "C6:1058"
+X <- X %>% mutate(NOTES_CLASSIF_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & CLASSIF1_CODE%in%c("AGE_AGGREGATE_15-24","AGE_10YRBANDS_Y15-24"), "C6:1058", NOTES_CLASSIF_CODE))
+X <- X %>% mutate(NOTES_CLASSIF_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%c("ESP","ISL","NOR","GBR") & CLASSIF1_CODE%in%c("AGE_5YRBANDS_Y15-19"), "C6:1058", NOTES_CLASSIF_CODE))
 
+X <- X %>% mutate(OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"ISL" & TIME_PERIOD%in%c("Y2003","Y2003_Q01"), "b", OBS_STATUS))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"DNK" & NOTES_INDICATOR_CODE%in%"T2:84_T3:104",'T2:84_T3:96', NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"DNK" & NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:104",'T5:114_T2:84_T3:96', NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"BEL" & NOTES_INDICATOR_CODE%in%"T2:84_T3:104",'T2:84_T3:94', NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"BEL" & NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:104",'T5:114_T2:84_T3:94', NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"FIN" & X$NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:89",'T5:114_T2:84_T3:104', NOTES_INDICATOR_CODE))
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"FIN" & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:89",'T2:84_T3:104', NOTES_INDICATOR_CODE))
 
+X <- X %>% mutate(NOTES_FREQUENCY_CODE = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"TUR" ,'S', NOTES_FREQUENCY_CODE))
+X <- X %>% mutate(OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"LUX" & TIME_PERIOD%in%c("Y2003","Y2003_Q01") & str_sub(CLASSIF1_CODE,1,7)%in%"GEO_COV",'b', OBS_STATUS))
+X <- X %>% mutate(OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"PRT" & TIME_PERIOD%in%c("Y1998","Y1998_Q01") & str_sub(CLASSIF1_CODE,1,3)%in%"DUR",'b', OBS_STATUS))
+X <- X %>% mutate(OBS_STATUS = ifelse(SOURCE_CODE%in%"BA" & COUNTRY_CODE%in%"NLD" & X$TIME_PERIOD%in%c("Y2010","Y2010_Q01") & str_sub(CLASSIF1_CODE,1,3)%in%"DUR",'b', OBS_STATUS))
 
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"ISL" & X$TIME_PERIOD%in%c("Y2003","Y2003_Q01"),"OBS_STATUS"] <- "b"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"DNK" & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:104","NOTES_INDICATOR_CODE"] <- "T2:84_T3:96"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"BEL" & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:104","NOTES_INDICATOR_CODE"] <- "T2:84_T3:94"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"FIN" & X$NOTES_INDICATOR_CODE%in%"T2:84_T3:89","NOTES_INDICATOR_CODE"] <- "T2:84_T3:104"
-
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"TUR","NOTES_FREQUENCY_CODE"] <- "S"
-
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"LUX" & X$TIME_PERIOD%in%c("Y2003","Y2003_Q01") & substr(X$CLASSIF1_CODE,1,7)%in%"GEO_COV","OBS_STATUS"] <- "b"   # BUGs
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"PRT" & X$TIME_PERIOD%in%c("Y1998","Y1998_Q01") & substr(X$CLASSIF1_CODE,1,3)%in%"DUR","OBS_STATUS"] <- "b"
-X[X$SOURCE_CODE%in%"BA" & X$COUNTRY_CODE%in%"NLD" & X$TIME_PERIOD%in%c("Y2010","Y2010_Q01") & substr(X$CLASSIF1_CODE,1,3)%in%"DUR","OBS_STATUS"] <- "b"
+X <- X %>% mutate(NOTES_INDICATOR_CODE = ifelse(COUNTRY_CODE%in%"ITA" & NOTES_INDICATOR_CODE%in%"T5:114_T2:84_T3:104",'T5:1429_T2:84_T3:104', NOTES_INDICATOR_CODE))
 
 
 invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
 
-
-X <- X %>% as.tbl %>% mutate(TEST = paste0(COUNTRY_CODE, SOURCE_CODE))%>% select(-SOURCE_CODE)%>%
+Y <- X %>% as.tbl %>% mutate(TEST = paste0(COUNTRY_CODE, SOURCE_CODE))%>% select(-SOURCE_CODE)%>%
 			left_join( select(as.tbl(ReadMeSource), TEST = COUNTRY_CODE, SOURCE_CODE), by = 'TEST') %>% 
 			select(-TEST) %>%  
 			mutate(COLLECTION_CODE = 'STI' ) %>%
@@ -353,15 +366,96 @@ X <- X %>% as.tbl %>% mutate(TEST = paste0(COUNTRY_CODE, SOURCE_CODE))%>% select
 				note_classif = NOTES_CLASSIF_CODE, 
 				note_indicator = NOTES_INDICATOR_CODE, 
 				note_source = NOTES_SOURCE_CODE ) %>% 
-		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
+		mutate(	sex = gsub('_X_', '_', sex), 
+				time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
 				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>%  
-		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
+		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE))) %>% 
+		mutate(note_source = 'R1:3903') # tab bulk download
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+rm(X)
+
+######################################################################
+######################################################################
+######################################################################
+################################### compare with EUROSTAT query and reduce 
+###################################
+######################################################################
+
+if(file.exists(paste0(ilo:::path$data, '/REP_EUROSTAT/LFS_ANNUAL_QUERY/output/QUERY_EUROSTAT_',REF[j],'.Rdata'))){
+
+Y_annual <- Y %>% filter(str_sub(time, 5,5) %in% '') 
+Y <- Y %>% filter(str_sub(time, 5,5) %in% c('Q', 'M'))
+
+
+load(paste0(ilo:::path$data, '/REP_EUROSTAT/LFS_ANNUAL_QUERY/output/QUERY_EUROSTAT_',REF[j],'.Rdata')) 
+
+X <- X %>% 
+		mutate( sex_version = str_sub(sex, 1,3), 
+				classif1_version = str_sub(classif1, 1,3),
+				classif2_version = str_sub(classif2, 1,3),
+				time = as.character(time)
+				) 
+			
+				
+test <- X	%>% 
+		select(ref_area:time, sex_version, classif1_version, classif2_version) %>% 
+		select(-sex, -classif1, -classif2) %>%
+		distinct() %>%
+		mutate(	indicator = paste0(str_sub(indicator, 1, 9), str_sub(indicator, -2, -1)), 
+				query = 1)
+
+Y_annual <- Y_annual %>%
+					mutate( sex_version = str_sub(sex, 1,3), 
+							classif1_version = str_sub(classif1, 1,3),
+							classif2_version = str_sub(classif2, 1,3),
+				)				
+
+Y_annual_bulk <- Y_annual %>% 
+			left_join(test, by = c("ref_area", "source", "indicator", "sex_version", "classif1_version", "classif2_version", "time")) %>% 
+			filter(!query %in% 1) %>% 
+			select(-query, -sex_version, -classif1_version, -classif2_version)	
+			
+			
+			
+Y_annual_query <-  Y_annual %>% 
+			left_join(test, by = c("ref_area", "source", "indicator", "sex_version", "classif1_version", "classif2_version", "time")) %>% 
+			filter(query %in% 1) %>% 
+			distinct(collection, ref_area, source, time, freq_code, query) %>%
+			mutate(	time = as.character(time))
+rm(Y_annual, test)
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))		
+X <- X %>% 
+		mutate(	indicator = ifelse(substr(indicator, 17,17) %in% '2', paste0(stringr::str_sub(indicator, 1, 5), '9', stringr::str_sub(indicator, 7, -1)), indicator), 
+				indicator = paste0(str_sub(indicator, 1, 9), str_sub(indicator, -2, -1))) %>% 
+		left_join(Y_annual_query, by = c("ref_area", "source", "time", "collection")) %>% 
+		select(-sex_version, -classif1_version, -classif2_version) %>% 
+		mutate(	obs_value = as.character(obs_value))
 		
+	
+
+
+	
+rm(Y_annual_query)
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))			
+Y <- bind_rows(Y, Y_annual_bulk, X)
+rm(Y_annual, Y_annual_bulk, X)
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
 
 
 
 
 
+}
+
+
+X <- Y %>% filter(!(str_detect(time , c('Q', '')) & str_detect(source, 'BE')))
+rm(Y)
+
+invisible(gc(reset = TRUE))
 invisible(gc(reset = TRUE))
 save(X,file = paste("./output/REP_EUROSTAT_",REF[j],".Rdata",sep=""))
 rm(X)
@@ -384,3 +478,6 @@ final_time <- Sys.time();{final_time  %>% str_sub(12,19) %>% hms() } - { init_ti
 rm(list=ls(all=TRUE)) 
 invisible(gc(reset = TRUE))
 q(save = "no", status = 0, runLast = FALSE)
+
+
+

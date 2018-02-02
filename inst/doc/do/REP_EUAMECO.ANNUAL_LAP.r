@@ -27,7 +27,6 @@
 #' @export
 #' @rdname Micro_process
 
-REP_EUAMECO.ANNUAL_LAP <- function (check = TRUE) {
 
   # SETUP; 
   ### redundant library calls for reference only
@@ -55,9 +54,10 @@ REP_EUAMECO.ANNUAL_LAP <- function (check = TRUE) {
   
   
   # STEP 1 Loading from server
-  Sys.setenv(http_proxy="http://proxy.ilo.ch:3128")
+  Sys.setenv(http_proxy="http://proxyos.ilo.org:8080")
+  path <- 'http://ec.europa.eu/economy_finance/ameco/Include/Query.cfm?serie=ALCD0&trn=1&agg=0&unite=0&ref=0&lstCntry=&lstYear=&code_serie=%27ALCD0%27&selection=0'
   
-  X <-xml2:::read_html(httr:::GET("http://ec.europa.eu/economy_finance/ameco/Include/Query.cfm?serie=ALCD0&trn=1&agg=0&unite=0&ref=0&lstCntry=&lstYear=&code_serie=%27ALCD0%27&selection=0")) %>% 
+  X <-xml2:::read_html(httr:::GET(path)) %>% 
     rvest:::html_table(header = TRUE) %>% # get dataset from html table 
     as.data.frame %>%                     # fixed list issue
     as.tbl %>% 
@@ -105,30 +105,43 @@ REP_EUAMECO.ANNUAL_LAP <- function (check = TRUE) {
   
   
   X <- X %>% 
-     mutate(collection="YI", 
+     mutate(collection="STI", 
 			obs_value = round(obs_value, 5), 
            indicator="LAP_DGVA_NOC_RT", 
            classif1="NOC_VALUE",
            note_indicator="T25:205_T26:1426_T27:213", 
-           note_source="R1:3903_R1:3904")
+           note_source="R1:3903_R1:3904") %>% # add tag Bulk and IMF
+		   mutate(	classif2 = as.character(NA), 
+					obs_status = as.character(NA), 
+					sex = as.character(NA), 
+					note_classif = as.character(NA), 
+					freq_code = 'm')
+					
+					
+					
   
-  ### reorder
-  X <- X %>% select_(.dots = c("collection", "ref_area", "indicator", "source", "classif1", "time", "obs_value", "note_indicator", "note_source"))
-  
-  
-  
-  # STEP 5; compare and Export to Output folder if need
-  # warning could not detect country that no longer exist at the moment
- if(!check) {X %>% compare_ilo(collection, ref_area, source.type, indicator)}
- if(check) {X %>% compare_ilo(collection, ref_area, source.type, indicator, check)}
+  ### rearrange
+  Y <- X %>% select_(.dots = c("collection", "ref_area", "indicator", "source", "sex", "classif1", "classif2", "time", "obs_value", "obs_status", "note_classif", "note_indicator", "note_source", "freq_code"))
+  rm(X)
+	
 
+REF <- levels(as.factor(Y$ref_area))
  
- 
- X
-
+# split and save by country
+for (i in 1:length(REF)){
+X <- Y %>% filter(ref_area%in%REF[i])
+save(X,file = paste("./output/REP_EUAMECO_",REF[i],".Rdata",sep=""))
+print(REF[i])
 }
 
 
+REF <- cbind(PATH = paste(getwd(), "/output/REP_EUAMECO_",REF,".Rdata",sep=""),ID = NA, Types  ="NSO_ilostat", REF = NA)
+write.csv(REF,"FileToLoad.csv",row.names = FALSE,na="")
 
 
 
+ 
+
+		
+rm(list=ls(all=TRUE)) 
+q(save = "no", status = 0, runLast = FALSE)

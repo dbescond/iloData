@@ -5,7 +5,7 @@
 \alias{Data_get_workflow}
 \title{backup do for Master files}
 \usage{
-Data_backup_cmd()
+Data_backup_cmd(wd)
 
 Data_get_workflow()
 }

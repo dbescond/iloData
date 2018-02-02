@@ -224,9 +224,10 @@ Y <- Y %>%
 				obs_status  =OBS_STATUS, 
 				freq_code = NOTES_FREQUENCY_CODE, 
 				note_classif = NOTES_CLASSIF_CODE, 
-				note_indicator = NOTES_INDICATOR_CODE, 
-				note_source = NOTES_SOURCE_CODE ) %>% 
-		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
+				note_indicator = NOTES_INDICATOR_CODE 
+				) %>% 
+		mutate(	note_source = 'R1:3903',  # add tag Bulk 
+				time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
 				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>% 
 		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
  
@@ -242,16 +243,6 @@ print(REF[i])
 
 REF <- cbind(PATH = paste0(getwd(), "/output/AUS_",REF,".Rdata"),ID = NA, Types  ="NSO_ilostat", REF = 'AUS')
 write.csv(REF,paste0("./FileToLoad.csv"),row.names = FALSE,na="")
-
-
-
-
-ref <- Mapping_File$ZIP_NAME %>% unique
-
-for (i in 1:length(ref)){
-# file.remove(paste0('C:/temp/',ref[i]))
-print(paste0(Mapping_File$NAME[i], ' : OK'))
-}
 
 
 

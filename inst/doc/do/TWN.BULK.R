@@ -4,19 +4,17 @@
 # Auteur: David Bescond ILO / Department of statistics
 # Date:  April 2016. last update May 2017
 #############################################################################
-Target <- "JPN"
+Target <- "TWN"
 init_time <- Sys.time() 
 cleanTemp <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.'))
-if(nrow(cleanTemp) > 0) {for (i in 1:nrow(cleanTemp)){unlink(paste0('C:\\temp\\', cleanTemp$value[i]))} }
 
+if(nrow(cleanTemp) > 0) {for (i in 1:nrow(cleanTemp)){unlink(paste0('C:\\temp\\', cleanTemp$value[i]))} }
 require(Ariane,quietly =TRUE)
 require(lubridate, quietly =TRUE)
-require(RSelenium, quietly =TRUE)
 require(readxl,quietly =TRUE)
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
- Sys.setenv(http_proxy="")
- Sys.setenv(ftp_proxy="")
- source(paste0(ilo:::path$data, '/',Target,'/BULK/','do/',Target,'.BULK_functions.r'))
+Sys.setenv(http_proxy="")
+Sys.setenv(ftp_proxy="")
 
 INPUT <- paste0(ilo:::path$data, '/',Target,'/BULK/input/')
 
@@ -24,9 +22,159 @@ Mapping_File <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="File", gue
 Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Definition", guess_max = 21474836) 
 
 
-# STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
 
-download_data_JPN(Mapping_File)
+# STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
+require(RSelenium, quietly =TRUE)
+shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
+	Sys.sleep(2)
+# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
+fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
+                                ,  browser.download.folderList = 2L
+                                , browser.download.manager.showWhenStarting = FALSE
+                                , browser.helperApps.neverAsk.saveToDisk = "text/csv"))
+                                #, browser.helperApps.neverAsk.saveToDisk = "application/octet-stream"))
+#RSelenium::startServer()
+remDr <- remoteDriver(extraCapabilities = fprof)
+remDr$open()    
+	
+for (i in 1:length(Mapping_File$NAME)){
+
+
+records <- Mapping_File %>% slice(i)
+	remDr$navigate(records$URL )
+	
+	Sys.sleep(10)
+
+	
+	webElem <- remDr$findElements('class name', 'tdtop')
+	# webElem$highlightElement()
+	
+	test <- webElem[[1]]$findChildElements(value = '//a[@alt = "Select all"]')
+	
+	
+	ref <- NULL
+	
+	for (j in 1:length(test)){
+		
+		test[[j]]$clickElement()
+	
+	}
+		
+	remDr$findElement(value = '//input[@value = "Continue"]')$highlightElement()
+	remDr$findElement(value = '//input[@value = "Continue"]')$clickElement()
+	
+		Sys.sleep(10)
+	remDr$findElement(value = '//input[@src = "includes/prnfiless.gif"]')$highlightElement()
+	remDr$findElement(value = '//input[@src = "includes/prnfiless.gif"]')$clickElement()
+	
+
+		Sys.sleep(10)
+
+
+		
+
+	
+	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.csv'))
+
+	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', records$NAME, '.csv'))
+
+	
+
+	print(i)
+	invisible(gc(reset = TRUE))
+
+
+	
+}
+remDr$closeServer()
+# remDr$close()
+
+
+for (i in 1:length(Mapping_File$NAME)){
+
+n_ref <- ncol(read_csv(paste0('./input/', Mapping_File$NAME[i], '.csv'), col_names = FALSE, skip = 10))
+
+
+ref <- read_lines(paste0('./input/', Mapping_File$NAME[i], '.csv'))
+
+
+ if(!str_detect(ref[3], 'Education')){
+
+	ref_title <- paste0(str_sub(ref[1],2,-1), str_sub(ref[2],2,-1), collapse = ' ')%>% 
+				str_replace(fixed('\"\"'), '') %>% 
+				str_replace(fixed('\"'), '') %>% 
+				str_split('by', simplify = TRUE) 
+	}  else{
+				
+		if(ref[2] %in% ''){
+
+			ref_title <- paste0(str_sub(ref[1],2,-1), collapse = ' ')%>% 
+						str_replace_all(fixed('"'), '') %>%
+						str_replace(fixed('and\"'), 'and ') %>% 
+						str_split('by', simplify = TRUE) 
+		} else {			
+				
+			ref_title <- paste0(str_sub(ref[1],2,-1), str_sub(ref[2],2,-1), str_sub(ref[3],2,-1), collapse = ' ')%>% 
+				str_replace(fixed('\"\"'), '') %>% 
+				str_replace(fixed('\"'), '') %>% 
+				str_replace(fixed('and\"'), 'and ') %>% 
+				str_sub(1,-2) %>% str_split('by', simplify = TRUE) 
+								
+				
+		}
+	}
+				
+ref_title <- ref_title[length(ref_title)]	 %>%  
+				str_split(',|and', simplify = TRUE) %>% t %>% as_data_frame %>% 
+				mutate(V1 = str_trim(V1)) %>% 
+				filter(!tolower(V1) %in% 'period') %>% t %>% as.character %>%
+				str_replace(fixed('"'), '') 
+ref_title <- str_replace(ref_title, 'Class ofWorkers', 'Class of Workers')
+
+		
+test <- ref %>% as_data_frame %>% mutate(		line = 1:n(), 
+										start = ifelse(str_sub(value,1,1) %in% "", line + 1, NA),
+										start =   ifelse(str_sub(value,2,5) %in% Mapping_File$Start_Year[i], line-1, start)) 
+										
+test <- test %>% filter(!start %in% NA) %>% slice(1:2) %>% select(start) %>% t %>% as.numeric										
+write_lines(ref[test[2]:test[1]], path = paste0('./input/', Mapping_File$NAME[i], '_COLNAMES.csv'), na = "NA", append = FALSE)
+
+NEW <-  read_csv(paste0('./input/', Mapping_File$NAME[i], '_COLNAMES.csv'), col_names = FALSE)  %>% select(-X1) %>% t
+
+if(length(ref_title) == 2){
+	NEW <- NEW %>% as_data_frame %>% fill(V1, V2, .direction = 'down') %>% select(2:1)
+	new_colnames <- NEW %>% mutate(ref = paste(V2, V1, sep = ' / ')) %>% select(ref) %>% t %>% as.character
+}
+if(length(ref_title) == 3){
+	NEW <- NEW %>% as_data_frame %>% fill(V1, V2, V3, .direction = 'down') %>% select(3:1)
+	new_colnames <- NEW %>% mutate(ref = paste(V3, V2, V1, sep = ' / ')) %>% select(ref) %>% t %>% as.character
+}
+if(length(ref_title) == 4){
+	NEW <- NEW %>% as_data_frame %>% fill(V1, V2, V3, V4, .direction = 'down') %>% select(4:1)
+	new_colnames <- NEW %>% mutate(ref = paste(V4, V3, V2, V1, sep = ' / ')) %>% select(ref) %>% t %>% as.character
+}
+colnames(NEW) <- ref_title
+
+print(Mapping_File$NAME[i])
+print(paste0(ref_title))
+
+X <- read_csv(paste0('./input/', Mapping_File$NAME[i], '.csv'), col_names = TRUE, skip = test[2]-1 ) 
+
+colnames(X) <- c('Time', new_colnames)
+
+X <- X %>% gather(key = 'key', value = 'Value', na.rm = TRUE, -Time) %>% separate(key, ref_title, sep = ' / ') %>% 
+			filter(!Value %in% c(NA, '-', '--')) %>% 
+			mutate(Value = as.numeric(Value))
+
+save(X, file = paste0('./input/', Mapping_File$NAME[i], '.Rdata'))
+
+unlink(paste0('./input/', Mapping_File$NAME[i], '_COLNAMES.csv'))
+
+rm(X)
+invisible(gc(reset = TRUE))
+
+}
+
 
 
 
@@ -34,15 +182,16 @@ download_data_JPN(Mapping_File)
 for (i in 1:length(Mapping_File$NAME)){
 
 	print(Mapping_File$NAME[i])
-	load(paste(INPUT,Mapping_File$NAME[i],".Rdata",sep=""))
+	load(paste0(INPUT,Mapping_File$NAME[i],".Rdata"))
 
 
 
 	# avoid white space in column header			
 	colnames(X) <- gsub(' ', '.', colnames(X), fixed = TRUE)
+	colnames(X) <- gsub('5', '', colnames(X), fixed = TRUE)
 
 	# get mapping frame File should be filled and File name correspond to Mapping_File ID 
-	REF_MAPPING <- Mapping_Definition %>% filter(!File %in% NA, File %in% str_sub(Mapping_File$ID[i],1,-3)) %>% select(-File)
+	REF_MAPPING <- Mapping_Definition %>% filter(!File %in% NA, File %in% Mapping_File$ID[i]) %>% select(-File)
 	# reduce mapping frame to columns ILO KEY + columns available on the dataset 
 
 	REF_MAPPING <- REF_MAPPING %>% 
@@ -81,7 +230,7 @@ for (i in 1:length(Mapping_File$NAME)){
 	ref_key_ilo <-  paste(ref_key_ilo, collapse = '/')
 
 	# clean
-	REF_MAPPING <- REF_MAPPING %>% 	mutate_each(funs(gsub('&amp;','&', ., fixed = TRUE)), -KEY_ILO) 
+	REF_MAPPING <- REF_MAPPING %>% 	mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) 
 
 	#create key	of X in national language
 	ref_key_nat <- X %>% slice(1) %>% select(-Time, -Value) %>% colnames
@@ -145,17 +294,15 @@ print(Mapping_File$ID[i])
 
 }
 
+
+
+
 # STEP 3 Combined BY COUNTRY and manage exception
 for (i in 1:length(Mapping_File$ID)){
 print(Mapping_File$ID[i])
 load(paste(INPUT,Mapping_File$ID[i],".Rdata",sep=""))
 
-if({colnames(Mapping_File)[colnames(Mapping_File) %in% 'Manip'] %>% length ==1} ){
-		if(!Mapping_File$Manip[i]%in%NA){
-			try(	X 	<- 	eval(parse(text= paste0('X %>% ',Mapping_File$Manip[i]))))
-		}
-}
-
+X <- X %>% mutate_all(as.character)
 if(i==1) Y <- X else Y <- bind_rows(Y,X)
 rm(X)
 invisible(gc(reset = TRUE))
@@ -166,7 +313,7 @@ REF <- levels(as.factor(substr(Y$Source_Code,1,2)))
 
 
 Y <- Y %>% # converge to ilostat format
-		as.tbl %>%  mutate(obs_status  =as.character(NA), note_source = 'R1:3903') %>% 
+		as.tbl %>%  mutate(obs_status  =as.character(NA), note_source = 'R1:3903', Value = as.numeric(Value)) %>% 
 		select(	collection = Collection_Code,  
 				ref_area = Country_Code, 
 				source = Source_Code, 

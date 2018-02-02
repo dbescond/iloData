@@ -6,8 +6,8 @@
 # Date:  April 2016. last update May 2017
 #############################################################################
 
-download_data_KOR <- function(Mapping_File){
-
+download_data_KOR <- function(Mapping_File,  TIME_WAIT = 2){
+# Mapping_File <- Mapping_File %>% slice(i)
 
 
 NAME <- Mapping_File$NAME
@@ -29,7 +29,7 @@ BulkDownload <- Mapping_File$BulkDownload
 #}
 require(RSelenium)
 shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
-	Sys.sleep(2)
+	Sys.sleep(TIME_WAIT * 2)
 
 # startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
 
@@ -42,12 +42,11 @@ remDr <- remoteDriver(extraCapabilities = fprof)
 remDr$open()    
 	
 
-
 	remDr$navigate(URL)
 	
-	Sys.sleep(10)
+	Sys.sleep(TIME_WAIT * 15)
 
-	
+	MainWindow <- remDr$getCurrentWindowHandle() %>% unlist 
 
 	
 # go on pivot frame
@@ -55,7 +54,7 @@ if(Pivot) {
 	webElem <- remDr$findElement('id', 'ico_swap')
 	webElem$highlightElement()
 	webElem$clickElement()
-	Sys.sleep(2)
+	Sys.sleep(TIME_WAIT * 2)
 	
 	webElem <- remDr$findElement('id', 'pop_pivotfunc2')$findChildElement('id', 'Ri1')
 	webElem$highlightElement()
@@ -65,16 +64,20 @@ if(Pivot) {
 	webElem$highlightElement()
 	webElem$clickElement()
 
-	webElem <- remDr$findElement('id', 'pop_pivotfunc2')$findChildElement('class name', 'closeBtn')
+	webElem <- remDr$findElement('id', 'pop_pivotfunc2')$findChildElement('class name', 'confirmBtn')
 	webElem$highlightElement()
 	webElem$clickElement()
-	Sys.sleep(10)
+	
+	# webElem <- remDr$findElement('id', 'pop_pivotfunc2')$findChildElement('class name', 'closeBtn')
+	# webElem$highlightElement()
+	# webElem$clickElement()
+	Sys.sleep(TIME_WAIT * 80)
 }
 # go on add function frame	
 	webElem <- remDr$findElement('id', 'ico_addfunc')
 	webElem$highlightElement()
 	webElem$clickElement()
-	Sys.sleep(2)
+	Sys.sleep(TIME_WAIT * 2)
 	
 	#webElem <- remDr$findElement('id', 'pop_addfunc')$findChildElement('name', 'dataOpt2')
 	#webElem$highlightElement()
@@ -86,14 +89,14 @@ if(Pivot) {
 	
 	webElem <- remDr$findElement('id', 'pop_addfunc')$findChildElement(value = '//a[@href = "javascript:fn_apply();"]')
 	webElem$clickElement()
-	Sys.sleep(10)
+	Sys.sleep(TIME_WAIT * 80)
 
 # setting criteria	
 	# open box 'Setting Criteria'
 	webElem <- remDr$findElement('class name', 'leftBtn')
 	webElem$highlightElement()
 	webElem$clickElement()
-	Sys.sleep(10)
+	Sys.sleep(TIME_WAIT * 30)
 	
 	#
 	
@@ -134,14 +137,17 @@ if(Pivot) {
 	webElem$clickElement()
 	
 	
-	Sys.sleep(40)
+	Sys.sleep(TIME_WAIT * 40)
 #if(Popup){
 	try(remDr$acceptAlert(), silent = TRUE)
+			Sys.sleep(TIME_WAIT * 8)
 	try(remDr$acceptAlert(), silent = TRUE)
+		Sys.sleep(TIME_WAIT * 8)
 	try(remDr$acceptAlert(), silent = TRUE)
+			Sys.sleep(TIME_WAIT * 8)
 	try(remDr$acceptAlert(), silent = TRUE)
 #}		
-	Sys.sleep(40)
+	Sys.sleep(TIME_WAIT * 130)
 	
 # download database	
 	# open box
@@ -162,7 +168,7 @@ if(BulkDownload){
 	#webElem$clickElement()
 	webElem <- remDr$findElement(using = 'id', value = "pop_downlarge")$findChildElement(value = '//a[@href = "javascript:fn_downLargeSubmit();"]')
 	webElem$clickElement()	
-	Sys.sleep(50)
+	Sys.sleep(TIME_WAIT * 50)
 
 	webElem <- remDr$findElement('id', 'pop_downglarge2')$findChildElement('link text' , 'X Close')
 	webElem$highlightElement()	
@@ -184,7 +190,7 @@ if(BulkDownload){
 	webElem$clickElement()
 	webElem <- remDr$findElement(using = 'id', value = "pop_downgrid")$findChildElement(value = '//a[@href = "javascript:fn_downGridSubmit();"]')
 	webElem$clickElement()	
-	Sys.sleep(20)
+	Sys.sleep(TIME_WAIT * 40)
 	
 	
 	
@@ -195,7 +201,10 @@ if(BulkDownload){
 
 }	
 
-remDr$close()
+	Sys.sleep(TIME_WAIT * 80)
+	
+
+try(remDr$close(), silent = TRUE)
 remDr$closeServer()
 
 rm(remDr, webElem) 
@@ -214,10 +223,10 @@ X <- readr::read_csv(paste0(INPUT, NAME,'.csv'), col_types = ref,  col_names = T
 
 
 X <- X[, !colnames(X) %in% c(NA, 'UNIT')]
+colnames(X) <- gsub(' ', '_' , colnames(X))
+X <- X %>% select(-starts_with('X'))
 
-######################## Exception UNE by DUR = ADD SEX = Total
-if(NAME %in% 'DT_1DA7028') {X <- X %>% select(-contains('X'))}
-if(NAME %in% c('DT_1DA7089')){ X <- X %>% mutate(By.gender = 'Total')}
+if(NAME %in% c('DT_1DA7089')){ X <- X %>% mutate(By_gender = 'Total')}
 
 ########################
 
@@ -228,23 +237,43 @@ ref_id <- ref_id[!substr(ref_id,1,2) %in% c('19', '20') ]
 invisible(gc(reset = TRUE))
 
 
-X 	%>% 	unite_('ID', ref_id, remove = TRUE, sep = '@') %>% 
+X <- X 	%>% 	unite_('ID', ref_id, remove = TRUE, sep = '@') %>% 
 			gather(key = TIME_PERIOD, value = OBS_VALUE, -ID, na.rm = TRUE) %>%
 			separate(ID, ref_id, remove = TRUE, sep = '@') %>% 
 			filter(!OBS_VALUE %in% c('NA', NA, '-'))%>% 
 			mutate(OBS_VALUE = as.numeric(OBS_VALUE)) %>% 
 			filter(!OBS_VALUE %in% NA) %>% 
-			mutate( TIME_PERIOD  = 	gsub(' Month', '', TIME_PERIOD  , fixed = TRUE),
-					TIME_PERIOD  = 	gsub(' Quarter', '', TIME_PERIOD  , fixed = TRUE),
-					TIME_PERIOD  = 	gsub(' Year', '', TIME_PERIOD  , fixed = TRUE),
+			mutate( TIME_PERIOD  = 	gsub('_Month', '', TIME_PERIOD  , fixed = TRUE),
+					TIME_PERIOD  = 	gsub('_Quarter', '', TIME_PERIOD  , fixed = TRUE),
+					TIME_PERIOD  = 	gsub('_Year', '', TIME_PERIOD  , fixed = TRUE),
 					TIME_PERIOD  = 	gsub('/4', '', TIME_PERIOD, fixed = TRUE),
-					TIME_PERIOD  = 	gsub('. ', '', TIME_PERIOD, fixed = TRUE), 
-					TIME_PERIOD  = 	gsub(' ', '', TIME_PERIOD, fixed = TRUE),
-					TIME_PERIOD  = 	gsub(' ', '', TIME_PERIOD, fixed = TRUE),
+					TIME_PERIOD  = 	gsub('._', '', TIME_PERIOD, fixed = TRUE), 
+					TIME_PERIOD  = 	gsub('_', '', TIME_PERIOD, fixed = TRUE),
+					TIME_PERIOD  = 	gsub('_', '', TIME_PERIOD, fixed = TRUE),
 					TIME_PERIOD  =  ifelse(nchar(TIME_PERIOD) %in% 6, paste0('Y', substr(TIME_PERIOD, 1, 4), '_M', substr(TIME_PERIOD, 5, 6)), TIME_PERIOD), 
 					TIME_PERIOD  =  ifelse(nchar(TIME_PERIOD) %in% 5, paste0('Y', substr(TIME_PERIOD, 1, 4), '_Q0', substr(TIME_PERIOD, 5, 5)), TIME_PERIOD), 
 					TIME_PERIOD  =  ifelse(nchar(TIME_PERIOD) %in% 4, paste0('Y', substr(TIME_PERIOD, 1, 4)), TIME_PERIOD)
 			) %>% 	
-			mutate_each(funs(gsub('&amp;','&', ., fixed = TRUE)), -TIME_PERIOD, -OBS_VALUE) %>% 
-			mutate_each(funs(gsub(';','@', ., fixed = TRUE)), -TIME_PERIOD, -OBS_VALUE) 
+			mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) %>% 
+			mutate_all(funs(gsub(';','@', ., fixed = TRUE))) 
+
+if(NAME %in%  'DT_1DA7013'){
+
+	X <- X %>% group_by(By_gender , By_education_level,  Item, TIME_PERIOD) %>% 
+			summarise(	OBS_VALUE = first(OBS_VALUE)) %>% ungroup
+}	
+
+if(NAME %in% c('DT_1DA7103', 'DT_1DA7087')){
+
+	X <- X %>% group_by(By_gender , By_education_level, TIME_PERIOD) %>% 
+			summarise(	OBS_VALUE = first(OBS_VALUE)) %>% ungroup
+}
+			
+			
+return(X)			
+			
+			
+			
+			
+			
 }

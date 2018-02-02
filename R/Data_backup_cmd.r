@@ -11,21 +11,22 @@
 #' ## End(**Not run**)
 #' @export
 #' @rdname Data_get_workflow
-Data_backup_cmd <- function(){
+Data_backup_cmd <- function(wd){
 
-wd <-  ilo:::path$data
-
+test <- ilo:::path$data
 master <- Data_get_workflow() %>% distinct(repo, project) %>% 
-				mutate(init = paste0(wd, repo, '/', project, '/do'), 
-					   backup = paste0(wd, '_Admin/CMD/iloData/inst/doc'))
+				mutate(init = paste0(test, repo, '/', project, '/do'), 
+					   backup = paste0(wd, 'iloData/inst/doc'))
 				
 				
 
 	for (i in 1:nrow(master)){
-		try(file.copy(from = master$init[i], to = master$backup[i],copy.mode = TRUE, copy.date = TRUE, recursive = TRUE), silent = TRUE)
+		try(file.copy(from = master$init[i], to = master$backup[i],copy.mode = TRUE, copy.date = TRUE, overwrite  = TRUE, recursive = TRUE), silent = TRUE)
 	}
 
-try(file.copy(from = paste0(ilo:::path$data, '_Admin/0_WorkFlow.xlsx'), to = paste0(ilo:::path$data, '_Admin/CMD/iloData/inst/doc/0_WorkFlow.xlsx'), copy.mode = TRUE, copy.date = TRUE), silent = TRUE)
+	file.copy(	from = paste0(ilo:::path$data, '_Admin/0_WorkFlow.xlsx'), 
+				to = paste0(wd, 'iloData/inst/doc/0_WorkFlow.xlsx'),copy.mode = TRUE, copy.date = TRUE, overwrite  = TRUE)
+	
 
 
 }

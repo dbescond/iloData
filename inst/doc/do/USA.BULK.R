@@ -252,7 +252,8 @@ Y <- Y %>%
 				note_indicator = NOTES_INDICATOR_CODE, 
 				note_source = NOTES_SOURCE_CODE ) %>% 
 		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
-				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>% 
+				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time), 
+				note_source = 'R1:3903') %>% 
 		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
  
 
@@ -280,25 +281,6 @@ print(paste0(Mapping_File$NAME[i], ' : OK'))
 
 
 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
  
  
 
