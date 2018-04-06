@@ -27,6 +27,9 @@ init_time <- Sys.time()
 
 download = TRUE
 require(ilo)		
+Sys.setenv(http_proxy="proxyos.ilo.org:8080")
+Sys.setenv(htts_proxy="proxyos.ilo.org:8080")
+Sys.setenv(ftp_proxy="proxyos.ilo.org:8080")
 
 setwd(paste0(ilo:::path$data, '/REP_OECD/LFS_ANNUAL/'))
 source(paste0(getwd(),"/do/REP_OECD.LFS_ANNUAL_functions.r"))
@@ -35,10 +38,9 @@ source(paste0(getwd(),"/do/REP_OECD.LFS_ANNUAL_functions.r"))
 ################################################### Download section
 
 if(download){
-	Sys.setenv(http_proxy="")
 	INPUT <- paste0(getwd(), '/input/')
 	Mapping_File <- readxl:::read_excel("./ReadME_OECD_LFS_ANNUAL.xlsx", sheet="File")  %>% filter(!ID%in%NA) %>% as.data.frame
-	require(RSelenium)
+	# require(RSelenium)
 	for(i in 1:length(Mapping_File$NAME)){
 
 		REP_OECD_LFS_ANNUAL_download(Mapping_File %>% slice(i))
@@ -63,15 +65,16 @@ if(download){
 						readRDS('./input/ANNUAL_STE.rds'), 
 						readRDS('./input/ANNUAL_EMP_SEX_ECO_ISIC3.rds'),
 						readRDS('./input/ANNUAL_EMP_SEX_ECO_ISIC4.rds')) %>% 
-			mutate(	value = round(obs_value, 3))	%>% 
+			mutate( value = round(obs_value, 3))	%>% 
 			select(ref_area, indicator, source, sex:obs_value, obs_status, note_classif, note_source)  %>% 
 			switch_ilo(version) %>% 
-			filter(as.numeric(time) >= 1990)				
+			filter(time >= 1990)				
   
   
   
   
   res <- res %>%     filter(!ref_area %in% c('IND','CHN', 'IDN')) %>% 
+					 mutate(time = as.character(time)) %>%
 					mutate(note_source = paste0('R1:3903_', note_source)) %>% 
 					filter(!(ref_area %in% 'COL' & classif1_version %in% 'ECO_ISIC3' & obs_value %in% 0)) %>%
 					filter(!(ref_area %in% 'CRI' & as.numeric(time) >2010)) %>%

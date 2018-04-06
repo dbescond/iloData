@@ -24,45 +24,20 @@ Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Defi
 
 
 # STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
-require(RSelenium, quietly =TRUE)
-shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
-	Sys.sleep(2)
-# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
-fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
-                                ,  browser.download.folderList = 2L
-                                , browser.download.manager.showWhenStarting = FALSE
-                                #, browser.helperApps.neverAsk.saveToDisk = "application/vnd.ms-excel"))
-                                , browser.helperApps.neverAsk.saveToDisk = "application/octet-stream"))
-#RSelenium::startServer()
-remDr <- remoteDriver(extraCapabilities = fprof)
-remDr$open()    
-	
+
 for (i in 1:length(Mapping_File$NAME)){
 
 
 records <- Mapping_File %>% slice(i)
-	remDr$navigate(records$URL )
+
+download.file(records$URL, paste0('./input/', records$NAME, '.csv'), mode = 'wb')
 	
-	
-		Sys.sleep(6)
-
-
-	
-	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.csv'))
-
-	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', records$NAME, '.csv'))
-
-	
-
 	print(i)
 	invisible(gc(reset = TRUE))
 
 
 	
 }
-#remDr$close()
-remDr$closeServer()
-
 
 
 for (i in 1:length(Mapping_File$NAME)){

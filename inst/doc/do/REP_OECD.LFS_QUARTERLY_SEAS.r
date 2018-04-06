@@ -18,72 +18,61 @@ Mapping_Definition <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="Def
 ReadMeSource <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="MappingSource")  
 
 
+
+
+########################### load meta
 source('./do/REP_OECD.LFS_QUARTERLY_SEAS_meta.r')
 
 
 header_ILO <- c("INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","NOTES_FREQUENCY_CODE")
 
-##########################################################
+########################### download data 
 
+Sys.setenv(http_proxy="proxyos.ilo.org:8080")
+Sys.setenv(htts_proxy="proxyos.ilo.org:8080")
+Sys.setenv(ftp_proxy="proxyos.ilo.org:8080")
 
 
 for(i in 1:length(Mapping_File$NAME)){
+	require(OECD)
+	dstruc <- get_data_structure(Mapping_File$dataset[i])
+	enddate <- str_sub(Sys.time(),1,4 ) %>% as.numeric
 
-shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
-	Sys.sleep(2)
-# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
-fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
-                                ,  browser.download.folderList = 2L
-                                , browser.download.manager.showWhenStarting = FALSE
-                                , browser.helperApps.neverAsk.saveToDisk = "application/text/csv"))
-#RSelenium::startServer()
-remDr <- remoteDriver(extraCapabilities = fprof)
-remDr$open()   
-
-remDr$navigate(Mapping_File$URL[i]) # go to query webpage
-
-	Sys.sleep(10)	
-
-remDr$executeScript("redirectToSurvey('csv');") # open csv download pop up
-
-remDr$switchToFrame('DialogFrame')
-
-
-	Sys.sleep(10)	
-
-remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_rbCustomLayout')$clickElement()
-	Sys.sleep(3)	
-remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_cbLabel')$clickElement()
-	Sys.sleep(3)	
-remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_btnExportCSV')$clickElement()
-	Sys.sleep(350)	
+	if(Mapping_File$freq[i] %in% 'Q'){
+		startdate <- 1980
+		ref_time <- paste0(rep(startdate:enddate,4) %>% sort,'-', c('Q1','Q2','Q3','Q4')) %>% sort
+		
+		}
+	if(Mapping_File$freq[i] %in% 'M'){	
+		startdate <- 1986
+		ref_time <- paste0(rep(startdate:enddate,12) %>% sort,'-', c('01','02','03','04','05','06','07','08','09','10','11','12')) %>% sort
+		}
 	
+	X <- NULL
+	for (j in ref_time){
+		y <- NULL
+		test <- try(y <- get_dataset(	dataset = Mapping_File$dataset[i], filter = Mapping_File$query[i], start_time = j, end_time = j, pre_formatted = TRUE), silent =TRUE)
+		if(!class(test)[1] %in% "try-error") X <- bind_rows(X, y) 
+		rm(y)
+	}
 	
+colnames(X) <- tolower(colnames(X))
+
+X %>% data.table:::fwrite(paste0(INPUT, Mapping_File$NAME[i],'.csv'), na = "")	
+
+######################## 
+######################## 
 
 
-remDr$close()
-remDr$closeServer()
+Base <- X %>% select(ref_area = location, subject,  measure, frequency, time = obstime, obs_value = obsvalue, obs_status =  obs_status)
 
 
-test <- list.files("C:\\temp\\")
-test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.csv']
-file.rename(paste0("C:\\temp\\",test),paste0(INPUT, Mapping_File$NAME[i],'.csv'))
-invisible(gc(reset = TRUE))
-
-Base <- read_csv(paste0(INPUT,Mapping_File$NAME[i],".csv"))
-
-
-colnames(Base) <- gsub(' ', '.', colnames(Base))
-
-Base <- Base %>% select(-Unit.Code, -PowerCode.Code, -Reference.Period.Code) %>% rename(Flags = Flag.Codes)
-
-
-header_NAT <- colnames(Base)[!colnames(Base)%in%c("TIME","Value","Flags")]
+header_NAT <- colnames(Base)[!colnames(Base)%in%c("time","obs_value","obs_status")]
 REF_MAPPING <- Mapping_Definition[Mapping_Definition$File%in%Mapping_File[i,"ID"],]
 header_NAT <- colnames(REF_MAPPING[,colnames(REF_MAPPING)%in%header_NAT])
 REF_MAPPING <- REF_MAPPING[,c(colnames(REF_MAPPING)[colnames(REF_MAPPING)%in%header_ILO],header_NAT)]
 
-Base <- Base %>% filter(!Flags%in%"M") %>% select(-contains('.Code'))
+Base <- Base %>% filter(!obs_status%in%"M")
 
 
 invisible(gc(reset = TRUE))
@@ -105,7 +94,7 @@ MY_NEW$ID_PASS <- paste(MY_NEW$ID_PASS,MY_NEW[,colnames(MY_NEW)%in%colnames(REF_
 }
 
 
-MY_MATRIX <- MY_NEW[1,c("ID_PASS","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","LOCATION","NOTES_FREQUENCY_CODE","TIME","Value","Flags")]
+MY_MATRIX <- MY_NEW[1,c("ID_PASS","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","ref_area","NOTES_FREQUENCY_CODE","time","obs_value","obs_status")]
 MY_MATRIX <- as.data.frame(MY_MATRIX)
 
 for (j in 1:nrow(REF_MAPPING)){
@@ -127,32 +116,32 @@ for (j in 1:nrow(REF_MAPPING)){
 
 
 MY_MATRIX <- as.data.frame(MY_MATRIX) %>% bind_rows(
-			MY_NEW[MY_NEW$ID_PASS%in%Y,colnames(MY_NEW)%in%c("ID_PASS","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","LOCATION","NOTES_FREQUENCY_CODE","TIME","Value","Flags")])
+			MY_NEW[MY_NEW$ID_PASS%in%Y,colnames(MY_NEW)%in%c("ID_PASS","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","ref_area","NOTES_FREQUENCY_CODE","time","obs_value","obs_status")])
 }
 rm(MY_NEW)
 
 MY_MATRIX <- MY_MATRIX[-1,]
 
-MY_MATRIX <- MY_MATRIX[!MY_MATRIX$Value%in%NA,]
+MY_MATRIX <- MY_MATRIX[!MY_MATRIX$obs_value%in%NA,]
 MY_MATRIX <- as.data.frame(MY_MATRIX) %>% as.tbl
 
 ######################### NEXT STEP
 
-# MY_MATRIX$ID_PASS <- paste(MY_MATRIX$LOCATION,MY_MATRIX[,"INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE"],MY_MATRIX$TIME,sep="/")
+# MY_MATRIX$ID_PASS <- paste(MY_MATRIX$ref_area,MY_MATRIX[,"INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE"],MY_MATRIX$time,sep="/")
 
 Y <- MY_MATRIX %>% 
 					select(-ID_PASS) %>% 
-					unite_("ID_PASS", c("LOCATION","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE", 'TIME'), sep = "/", remove = FALSE) %>% 
-					mutate(Value = as.numeric(Value)) %>% 
+					unite_("ID_PASS", c("ref_area","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE", 'time'), sep = "/", remove = FALSE) %>% 
+					mutate(obs_value = as.numeric(obs_value)) %>% 
 					separate_('INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE', c("INDICATOR_CODE","SEX_CODE","CLASSIF1_CODE","CLASSIF2_CODE"), sep = "/", remove = TRUE) %>% 
-					mutate( TIME = gsub('-Q', '_Q0', TIME, fixed = TRUE), 
-							TIME = paste0('Y', TIME), 
-							TIME = gsub("-","_M",TIME, fixed = TRUE)) %>%
+					mutate( time = gsub('-Q', '_Q0', time, fixed = TRUE), 
+							time = paste0('Y', time), 
+							time = gsub("-","_M",time, fixed = TRUE)) %>%
 					rename(	ID = ID_PASS, 
-							COUNTRY_CODE = LOCATION, 
-							TIME_PERIOD = TIME, 
-							OBS_VALUE = Value, 
-							OBS_STATUS = Flags
+							COUNTRY_CODE = ref_area, 
+							TIME_PERIOD = time, 
+							OBS_VALUE = obs_value, 
+							OBS_STATUS = obs_status
 							) %>% 
 					mutate(	SOURCE_CODE = Mapping_File$SOURCE_CODE[i], 
 							NOTES_CLASSIF_CODE = as.character(NA), 

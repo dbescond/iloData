@@ -26,50 +26,63 @@ Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Defi
 
 # STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
 { 
-	require(RSelenium) ######## 1.7.1 only
-	pJS <- phantom()
-	shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
-
-		
-	remDr <- remoteDriver(browserName = 'phantomjs')
-	remDr$open()
+require(RSelenium, quietly =TRUE)
+shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
+	Sys.sleep(2)
+# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
+fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
+                                ,  browser.download.folderList = 2L
+                                , browser.download.manager.showWhenStarting = FALSE
+                                , browser.helperApps.neverAsk.saveToDisk = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                                #, browser.helperApps.neverAsk.saveToDisk = "application/vnd.ms-excel"))
+                                #, browser.helperApps.neverAsk.saveToDisk = "application/octet-stream"))
+								# application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+#RSelenium::startServer()
+remDr <- remoteDriver( extraCapabilities = fprof )
+remDr$open()    
+	
+	
+	
+	
 	
 	remDr$navigate('http://www.instat.gov.al/en/themes/labour-market-and-education/employment-and-unemployment-from-lfs/#tab2' )
 	
-	
-	Sys.sleep(3)
+Sys.sleep(3)
 
-	remDr$getTitle()[[1]]
+
 	
 	webElem <- remDr$findElement(value = '//a[@href = "#tab2"]')
 	webElem$clickElement()
 	
-	firstlink <- remDr$findElement(value = '//div[@id = "tab2"]')$findChildElement("css selector", value = 'tbody')$findChildElement("css selector", value = 'tr')$findChildElements("css selector", value = 'td.icon')[[1]]$findChildElement("css selector", value = 'a')$getElementAttribute('href') %>% unlist
-	download.file(firstlink, paste0('./input/', basename(firstlink)), mode = 'wb')
-
+	webElem <- remDr$findElement(value = '//a[@href = "/media/2567/t1.xlsx"]')
+	webElem$clickElement()
 	Sys.sleep(2)
+	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.xlsx'))
+	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', newfile$value[1]))
 
-	secondlink <- remDr$findElement(value = '//div[@id = "tab2"]')$findChildElement("css selector", value = 'tbody')$findChildElements("css selector", value = 'tr')[[2]]$findChildElements("css selector", value = 'td.icon')[[1]]$findChildElement("css selector", value = 'a')$getElementAttribute('href') %>% unlist
-	download.file(secondlink, paste0('./input/', basename(secondlink)), mode = 'wb')
-
+	webElem <- remDr$findElement(value = '//a[@href = "/media/2570/t2.xlsx"]')
+	webElem$clickElement()
 	Sys.sleep(2)
+	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.xlsx'))
+	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', newfile$value[1]))
 
-	thirdlink <- remDr$findElement(value = '//div[@id = "tab2"]')$findChildElement("css selector", value = 'tbody')$findChildElements("css selector", value = 'tr')[[3]]$findChildElements("css selector", value = 'td.icon')[[1]]$findChildElement("css selector", value = 'a')$getElementAttribute('href') %>% unlist
-	download.file(thirdlink, paste0('./input/', basename(thirdlink)), mode = 'wb')
-
-
+	webElem <- remDr$findElement(value = '//a[@href = "/media/3119/t3.xlsx"]')
+	webElem$clickElement()
 	Sys.sleep(2)
+	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.xlsx'))
+	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', newfile$value[1]))
 
-	fourthlink <- remDr$findElement(value = '//div[@id = "tab2"]')$findChildElement("css selector", value = 'tbody')$findChildElements("css selector", value = 'tr')[[4]]$findChildElements("css selector", value = 'td.icon')[[1]]$findChildElement("css selector", value = 'a')$getElementAttribute('href') %>% unlist
-	download.file(fourthlink, paste0('./input/', basename(fourthlink)), mode = 'wb')
+	webElem <- remDr$findElement(value = '//a[@href = "/media/3120/t4.xlsx"]')
+	webElem$clickElement()
+	Sys.sleep(2)
+	newfile <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.')) %>% filter(str_detect(value, '.xlsx'))
+	file.rename(paste0("C:\\temp\\",newfile$value[1]),paste0('./input/', newfile$value[1]))
 
 	invisible(gc(reset = TRUE))
 
-remDr$close()	
-	
-invisible(try(remDr$closeServer(), silent = TRUE))
-pJS$stop()
-rm(pJS)
+remDr$closeServer()
+
+
 
 
 for (i in 1:length(Mapping_File$NAME)){

@@ -38,6 +38,8 @@ rm(ref)
 }	
 rm(test)
 
+
+
 AGG
 
 
@@ -1056,7 +1058,7 @@ EMP_ECO_SECTOR <- NEW_MASTER %>%
 				left_join(GET, by = c("country", "time", 'sex')) %>% 
 				mutate(
 						ECO_SECTOR_AGR = paste0(EMP_2EMP_SEX_AGE_NB * (EMP1shP)/100, ' ', dummy1), 
-						ECO_SECTOR_IND = paste0(EMP_2EMP_SEX_AGE_NB * (EMP2shP + EMP3shP + EMP4shP + EMP4shP)/100), 
+						ECO_SECTOR_IND = paste0(EMP_2EMP_SEX_AGE_NB * (EMP2shP + EMP3shP + EMP4shP)/100), 
 						ECO_SECTOR_SER = paste0(EMP_2EMP_SEX_AGE_NB * (EMP5shP + EMP6shP)/100), 
 						ECO_SECTOR_TOTAL = paste0(EMP_2EMP_SEX_AGE_NB),
 						
@@ -1357,12 +1359,12 @@ EMP_2EMP_SEX_AGE_CLA_NB <- NEW_MASTER %>%
 				gather(classif2, value, -country, -sex, -classif1, -time, -STEP1) %>%
 				arrange(country, time, sex, classif1, classif2) %>% 
 				rename(obs_status = STEP1)	%>% 
-				mutate(obs_status = ifelse(obs_status %in% 1, 'R', obs_status))
-					
+				mutate(obs_status = ifelse(obs_status %in% 1, 'R', obs_status), TEST = 1)
 
-###################### ok we have country level but only 138 country, now have to fill gaps for EMP in order to get 188 country
+KEEP_CLASS_DETAILS <- EMP_2EMP_SEX_AGE_CLA_NB %>% filter(classif2 %in% c('CLA_ECOCLA_USDGE3LT5', 'CLA_ECOCLA_USDGE5'))				
 				
-
+###################### ok we have country level but only 138 country, now have to fill gaps for EMP in order to get 188 country
+		
 GAP <- NEW_MASTER %>% 
 				select(collection:time, value = EMP_2EMP_SEX_AGE_NB, -source, -collection) %>% 
 				filter( !substr(country,1,1) %in% 'X', !country %in% unique(EMP_2EMP_SEX_AGE_CLA_NB$country)) 
@@ -1370,13 +1372,14 @@ GAP <- NEW_MASTER %>%
 
 rm(NEW_MASTER)
 				
-GET_NB_COU <- EMP_2EMP_SEX_AGE_CLA_NB %>% 
-			bind_rows( 	GAP %>% mutate(classif2 = 'CLA_ECOCLA_TOTAL'), 
-						GAP %>% mutate(classif2 = 'CLA_ECOCLA_USDGE3'))
 
-								
+			
+			
+a <- 	bind_rows( 	GAP %>% mutate(classif2 = 'CLA_ECOCLA_TOTAL'), 
+					GAP %>% mutate(classif2 = 'CLA_ECOCLA_USDGE3')) %>% 
+			mutate(	indicator = 'EMP_2EMP_SEX_AGE_CLA_NB') 		
 
-GET_NB_COU <- GET_NB_COU %>% mutate(classif2 = classif2 %>% 						# mapping classif2
+b <- EMP_2EMP_SEX_AGE_CLA_NB %>% mutate(classif2 = classif2 %>% 						# mapping classif2
 							plyr::mapvalues(from = c('CLA_ECOCLA_USDLT2',
 													 'CLA_ECOCLA_USDGE2LT3', 
 													 'CLA_ECOCLA_USDGE3LT5', 
@@ -1385,14 +1388,25 @@ GET_NB_COU <- GET_NB_COU %>% mutate(classif2 = classif2 %>% 						# mapping clas
 													 'CLA_ECOCLA_USDGE2LT3', 
 													 'CLA_ECOCLA_USDGE3', 
 													 'CLA_ECOCLA_USDGE3')), 
-							indicator = 'EMP_2EMP_SEX_AGE_CLA_NB')				
+							indicator = 'EMP_2EMP_SEX_AGE_CLA_NB') %>% 
+						group_by(country, indicator, time, sex, classif1, classif2) %>% 
+						summarise(value = sum(value, na.rm = TRUE), 
+						TEST = 1) %>% ungroup %>% bind_rows(KEEP_CLASS_DETAILS)
+		
+
+GET_NB_COU <-  bind_rows(a, b)	  		
 							
 
 REF_AGG <- ilo$code$cl_country_by_group %>% 					# prepare mapping for country group 'region'
-					filter(
-						substr(code,1,9) %in% c('ILO_GEO_X', 'ILO_GEO_W')) %>% 
+					filter(	substr(code,1,7) %in% c('ILO_GEO', 'ECO_G20', 'ECO_EU2', 'ECO_BRI', 'ECO_ASE', 'ECO_WMB')) %>% 
 					select(region = code, country = code_country) %>% 
-					mutate(region = str_sub(region, -3,-1))
+					mutate(	region = gsub('ECO_EU28', 'ECO_EU28_X82', region, fixed = TRUE), 
+							region = gsub('ECO_G20', 'ECO_G20_X83', region, fixed = TRUE), 
+							region = gsub('ECO_ASEAN', 'ECO_ASEAN_X84', region, fixed = TRUE),
+							region = gsub('ECO_WMBRICS', 'ECO_WMBRICS_X87', region, fixed = TRUE),
+							region = gsub('ECO_BRICS', 'ECO_BRICS_X85', region, fixed = TRUE), 
+							region = str_sub(region, -3,-1)
+							)
 	
 	
 AGG <- NULL														# set result dataset to empty
@@ -1400,17 +1414,24 @@ test <- unique(REF_AGG$region) %>% sort							# prepare loop on region
 for (i in 1:length(test)){
 ref <- REF_AGG %>% 
 		filter(region %in% test[i]) %>% 
-		select(country) %>% t %>% as.character					# store relevant country list
+		select(country) %>% 
+		filter(country %in% unique(GET_NB_COU$country)) %>% t %>% as.character					# store relevant country list
+count_ref <- length(ref)
 		
 AGG <-  GET_NB_COU %>% 
 		filter(country %in% ref) %>% 							# filter country i
 		group_by(indicator, time, sex, classif1, classif2) %>%# group 	
-		summarise(	country = test[i], 							# rename country = region
-					value = sum(value, na.rm = TRUE)) %>% 		# sum
+		summarise(	TEST = as.integer(sum(TEST, na.rm = TRUE)) ,
+					TEST2 = count_ref,		
+					country = test[i], 							# rename country = region
+					value = sum(value, na.rm = TRUE), 
+					) %>% 		# sum
 		ungroup %>% bind_rows(AGG) 								# ungroup
 rm(ref)
 }	
 rm(test, GET_NB_COU, REF_AGG, GAP)
+
+AGG <- AGG %>% filter(!(classif2 %in% c('CLA_ECOCLA_USDGE3LT5', 'CLA_ECOCLA_USDGE5') & !TEST %in% TEST2)) %>% select(-TEST, -TEST2)
 
 #################################### add benchmark country with STEP1
 
@@ -1418,14 +1439,6 @@ rm(test, GET_NB_COU, REF_AGG, GAP)
 EMP_2EMP_SEX_AGE_CLA_NB <- EMP_2EMP_SEX_AGE_CLA_NB %>% filter(!country %in% 'BHR') %>%  bind_rows(AGG) %>% 										# 
 		arrange(country, time, sex, classif1, classif2)					# resort
 rm(AGG)
-
-
-
-
-
-
-
-
 
 
 EMP_2EMP_SEX_AGE_CLA_NB <- EMP_2EMP_SEX_AGE_CLA_NB %>%  mutate(collection = 'ILOEST')%>%
@@ -2337,7 +2350,7 @@ SDG_0111_EMP_2EMP_SEX_AGE_CLA_DT <- function(){
 
 load(paste0(ilo:::path$data,'REP_ILO/ILOEST/input/temp/NEW_MASTER.Rdata'))
 
-GET <- read_dta(file_get_class)  %>% select(country = iso3code, time = year, MF_T_class1P:F_A_class14P, STEP1) %>%  filter( time <= max(time_get), time >= min(time_get) ) %>% 
+GET <- haven::read_dta(file_get_class)  %>% select(country = iso3code, time = year, MF_T_class1P:F_A_class14P, STEP1) %>%  filter( time <= max(time_get), time >= min(time_get) ) %>% 
 			gather(ref, value, -country, -time, -STEP1) %>% 
 			separate(ref, c('sex','classif1','classif2'), sep = '_')
 			
@@ -2433,7 +2446,7 @@ rm(test, GET_NB_COU, REF_AGG, GAP)
 
 
 EMP_2EMP_SEX_AGE_CLA_NB <- EMP_2EMP_SEX_AGE_CLA_NB %>% filter(obs_status %in% 'R') %>% ####################### remove inputed value
-								bind_rows(AGG) %>% 										# 
+								 bind_rows(AGG) %>% 										# 
 								arrange(country, time, sex, classif1, classif2)					# resort
 rm(AGG)
 
@@ -2449,7 +2462,7 @@ EMP_2EMP_SEX_AGE_CLA_NB <- EMP_2EMP_SEX_AGE_CLA_NB %>%
 										mutate(	country = str_sub(country,1,3)), 
 										source = as.character(source), 
 										by = 'country') %>% 
-			 arrange(collection, country, source, indicator, time, sex, classif1, classif2) %>% mutate(indicator = 'EMP_2EMP_SEX_AGE_CLA_NB') 
+			 arrange(collection, country, source,  time, sex, classif1, classif2) %>% mutate(indicator = 'EMP_2EMP_SEX_AGE_CLA_NB') 
 
 
 

@@ -31,44 +31,44 @@ key 		<- c("COLLECTION_CODE","COUNTRY_CODE", "SOURCE_CODE", "INDICATOR_CODE","SE
 
 URL <- 'http://archive.stats.govt.nz/tools_and_services/releases_csv_files/csv-files-for-infoshare.aspx'
 
-require(RSelenium)
-shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
-	Sys.sleep(2)
-# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = TRUE)
-fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
-                                ,  browser.download.folderList = 2L
-                                , browser.download.manager.showWhenStarting = FALSE
-                                , browser.helperApps.neverAsk.saveToDisk = "application/x-zip-compressed"))
-#RSelenium::startServer()
-remDr <- remoteDriver(extraCapabilities = fprof)
-remDr$open()    
+require(RSelenium) ######## 1.7.1 only
+	pJS <- phantom()
+	shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
+
+		
+	remDr <- remoteDriver(browserName = 'phantomjs')
+	remDr$open()  
 	
 
 	
 	remDr$navigate(URL)
 	
-	Sys.sleep(10)
-
-remDr$findElement('class name', 'content')$findChildElement('partial link text', 'Labour Market Statistics')$highlightElement()	
-remDr$findElement('class name', 'content')$findChildElement('partial link text', 'Labour Market Statistics')$clickElement()
-
-	Sys.sleep(100)
+	Sys.sleep(3)
+	
+	remDr$getTitle()[[1]]
 	
 
+	mypath <- remDr$findElement('class name', 'content')$findChildElement('partial link text', 'Labour Market Statistics')$getElementAttribute('href') %>% unlist
+	download.file(mypath, paste0('./input/', paste0(Mapping_File$ZIP_NAME[1]), '.zip'), mode = 'wb')
 
-remDr$close()
-remDr$closeServer()
+
 	
+
+	invisible(gc(reset = TRUE))
+
+remDr$close()	
+	
+invisible(try(remDr$closeServer(), silent = TRUE))
+pJS$stop()
+rm(pJS)
 
 rm(URL)	
 	
 }
 
-test <- list.files("C:\\temp\\")
-test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.zip']
-file.rename(paste0("C:\\temp\\",test),paste0(INPUT, unique(Mapping_File$ZIP_NAME),'.zip'))
-
 setwd(INPUT)
+
+
 unzip(paste0(INPUT,unique(Mapping_File$ZIP_NAME),'.zip'))
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
 # STEP 1 CLEAN UP AND REDUCE ORIGINAL FILE

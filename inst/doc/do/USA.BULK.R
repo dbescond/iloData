@@ -15,11 +15,15 @@ require(readxl,quietly =TRUE)
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
 Sys.setenv(http_proxy="")
 Sys.setenv(ftp_proxy="")
+Sys.setenv(http_proxy="proxyos.ilo.org:8080")
+Sys.setenv(htts_proxy="proxyos.ilo.org:8080")
+Sys.setenv(ftp_proxy="proxyos.ilo.org:8080")
+
 source(paste0(ilo:::path$data, '/',Target,'/BULK/','do/',Target,'.BULK_functions.r'))
 
 INPUT <- paste0(ilo:::path$data, '/',Target,'/BULK/input/')
 
-Mapping_File <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="File", guess_max = 1000)  %>% filter(!ID%in%NA) %>% as.data.frame
+Mapping_File <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="File", guess_max = 1000)  %>% filter(!ID%in%NA) %>% as.data.frame  %>% filter(IsValidate %in% 'Yes')
 Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Definition", guess_max = 21474836) %>% as.data.frame
 
 
@@ -34,7 +38,7 @@ note 		<- c("NOTES_FREQUENCY_CODE","NOTES_CLASSIF_CODE","NOTES_INDICATOR_CODE","
 
 for (i in 1:length(Mapping_File$NAME)){
 
-test <- try( download.file(Mapping_File$URL[i], paste0(INPUT,Mapping_File$NAME[i], '.txt' ),  quiet = T), silent = T)
+test <- try( download.file(Mapping_File$URL[i], paste0(INPUT,Mapping_File$NAME[i], '.txt' , mode = 'wb'),  quiet = T), silent = T)
 
 print(paste0(Mapping_File$NAME[i], '/ download -> ',ifelse(test%in% 0, 'OK', 'ERROR') ))
 
@@ -52,6 +56,7 @@ invisible(gc(reset = TRUE))
 
 ref <- readr::read_delim(paste0(INPUT,Mapping_File$NAME[i],'.txt'), col_names = TRUE, n_max = 3, quote ='\t', delim='\t')
 ref <- paste0(rep('c', ncol(ref)), collapse = '')
+invisible(gc(reset = TRUE))
 invisible(gc(reset = TRUE))
 X <- readr::read_delim(paste0(INPUT,Mapping_File$NAME[i],'.txt'), col_types = ref,  col_names = TRUE, quote ='\t', delim='\t') %>% 
 		mutate(		series_id = str_trim(series_id, side = c("both")), 
@@ -288,3 +293,5 @@ final_time <- Sys.time();{final_time  %>% str_sub(12,19) %>% hms() } - { init_ti
 rm(list=ls(all=TRUE)) 
 invisible(gc(reset = TRUE))
 q(save = "no", status = 0, runLast = FALSE)
+
+

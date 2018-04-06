@@ -5,11 +5,13 @@
 # Date:  April 2016. last update May 2017
 #############################################################################
 Target <- "MAC"
+require(tidyverse,quietly =TRUE)
 init_time <- Sys.time() 
 cleanTemp <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.'))
 
 if(nrow(cleanTemp) > 0) {for (i in 1:nrow(cleanTemp)){unlink(paste0('C:\\temp\\', cleanTemp$value[i]))} }
 require(Ariane,quietly =TRUE)
+
 require(lubridate, quietly =TRUE)
 require(readxl,quietly =TRUE)
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
@@ -28,28 +30,44 @@ require(RSelenium, quietly =TRUE)
 shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
 	Sys.sleep(2)
 # startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
-fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
+fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\temp"
                                 ,  browser.download.folderList = 2L
-                                , browser.download.manager.showWhenStarting = FALSE
-                                #, browser.helperApps.neverAsk.saveToDisk = "application/vnd.ms-excel"))
-                                , browser.helperApps.neverAsk.saveToDisk = "application/octet-stream"))
+                                ,  browser.download.autohideButton = TRUE
+                                ,  browser.download.animateNotification = TRUE
+								, network.proxy.autoconfig_url = 'http://proxyos.ilo.org:8080'
+								, network.proxy.http = 'proxyos.ilo.org'
+								, network.proxy.http_port = 8080L
+								, network.proxy.ftp = 'proxyos.ilo.org'
+								, network.proxy.ftp_port = 8080L
+								, network.proxy.socks = 'proxyos.ilo.org'
+								, network.proxy.socks_port = 8080L
+								, network.proxy.ssl = 'proxyos.ilo.org'
+								, network.proxy.ssl_port = 8080L                                
+								, network.proxy.type = 4L                                
+								, browser.download.manager.showWhenStarting = FALSE
+                                , browser.helperApps.neverAsk.saveToDisk = 'application/octet-stream' 
+								
+								))
 #RSelenium::startServer()
-remDr <- remoteDriver(extraCapabilities = fprof)
+remDr <- remoteDriver(extraCapabilities = fprof, browserName = 'firefox', remoteServerAddr = '127.0.0.1')
 remDr$open()    
 
 	
 for (i in 1:length(Mapping_File$NAME)){
 
 remDr$navigate('http://www.dsec.gov.mo/Statistic/LabourAndEmployment/EmploymentSurvey.aspx?lang=en-US')
-	Sys.sleep(6)
+		Sys.sleep(3)
+remDr$getTitle()[[1]]
 	
+
 	records <- Mapping_File %>% slice(i)
 	remDr$navigate(records$URL)
 		
+		remDr$getTitle()[[1]]
 	
 		Sys.sleep(6)
 	webElem <- remDr$findElements('class name', 'rtbText')
-	webElem[[1]]$highlightElement()
+	# webElem[[1]]$highlightElement()
 	webElem[[1]]$clickElement()
 	
 		Sys.sleep(15)
@@ -66,9 +84,8 @@ remDr$navigate('http://www.dsec.gov.mo/Statistic/LabourAndEmployment/EmploymentS
 
 	
 }
-# remDr$close()
-remDr$closeServer()
-
+invisible(try(remDr$close()	, silent = TRUE))
+invisible(try(remDr$closeServer(), silent = TRUE))
 
 
 for (i in 1:length(Mapping_File$NAME)){
@@ -156,31 +173,6 @@ for (i in 1:length(Mapping_File$NAME)){
 					select(contains('_Code')) %>% 
 					bind_cols(REF_MAPPING %>% select_(.dots = colnames(X)[!colnames(X)%in% c('Time','Value') ]))
 
-	# split columns to avail mapping redondancy					
-
-	# SplitCol <- Mapping_File$SplitCol[i]
-	# if(!is.na(SplitCol)){
-		# SplitCol <- str_split(SplitCol, ' = ') %>% unlist
-		# SplitCol[1] <- gsub(' ', '.', SplitCol[1], fixed = TRUE)
-		# ref <- str_split(unique(REF_MAPPING[,SplitCol[[1]]]), ';') %>% unlist
-		# MAP <- NULL
-		# for ( j in seq_along(ref)){
-			# MAP <- bind_rows(MAP,
-							# bind_cols(REF_MAPPING %>% select(-contains(SplitCol[1])), data_frame(pass = 1:nrow(REF_MAPPING), ToChange = ref[j])) 
-						# )
-		# }					
-		# REF_MAPPING <- MAP %>% select(-pass) 
-		## map sex 
-		# test <- try(
-					# REF_MAPPING <- REF_MAPPING %>% 	mutate(ToChangeCode = mapvalues(ToChange, c('Both sexes','Female','Male'),  c('SEX_T','SEX_F','SEX_M'), warn_missing = FALSE)) 
-				# , silent = TRUE )
-
-		# colnames(REF_MAPPING)[colnames(REF_MAPPING) %in% 'ToChange'] <- SplitCol[1]
-		# colnames(REF_MAPPING)[colnames(REF_MAPPING) %in% 'ToChangeCode'] <- SplitCol[2]
-	# } else {
-		# REF_MAPPING <- REF_MAPPING %>% mutate(Sex_Code = 'SEX_T')
-	# }
-	# rm(SplitCol)
 
 	#create ilo key	of ref_mapping
 	ref_key_ilo <- REF_MAPPING %>% slice(1) %>% select(contains('_Code')) %>% colnames
@@ -188,7 +180,7 @@ for (i in 1:length(Mapping_File$NAME)){
 	ref_key_ilo <-  paste(ref_key_ilo, collapse = '/')
 
 	# clean
-	REF_MAPPING <- REF_MAPPING %>% 	mutate_each(funs(gsub('&amp;','&', ., fixed = TRUE)), -KEY_ILO) 
+	REF_MAPPING <- REF_MAPPING %>% 	mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) 
 
 	#create key	of X in national language
 	ref_key_nat <- X %>% slice(1) %>% select(-Time, -Value) %>% colnames
@@ -287,7 +279,7 @@ Y <- Y %>% # converge to ilostat format
 				note_indicator = Notes_Indicator_Code, 
 				note_source
 				 )  %>%  
-		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE))) 
+		mutate_all(funs(plyr::mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE))) 
  
 ############################################ exception
 

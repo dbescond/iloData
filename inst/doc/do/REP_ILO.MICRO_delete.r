@@ -4,15 +4,13 @@
 
 
 
-
-
 require(tidyverse)
 require(stringr)
 
 
 ################# test micro versus YI for deletion
 {
-readMicro <- read_csv("J:\\COMMON\\STATISTICS\\DPAU\\DATA\\REP_ILO\\MICRO\\FileToLoad.csv")$PATH
+readMicro <- read_csv("J:\\DPAU\\DATA\\REP_ILO\\MICRO\\FileToLoad.csv")$PATH
 
 res <- NULL
 for (i in 1:length(readMicro)){
@@ -64,10 +62,10 @@ name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% st
  
   #PRINT %>% data.table::fwrite( file = name)
 
- name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO/MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  if(length(name) > 1) {
  
-	name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO/MICRO/input/', unique(TEST$ref_area), '_',  '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+	name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/', unique(TEST$ref_area), '_',  '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  
  
  }
@@ -148,7 +146,7 @@ TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, indicator, time, STI), by
 
 if(nrow(TEST) > 0){
 
- name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO/MICRO/input/EUROSTAT_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/EUROSTAT_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  TEST %>% select(-STI, -contains('_version'))  %>% write_csv(  path = name, na = '')
 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
@@ -205,7 +203,7 @@ if(nrow(TEST) > 0){
 # name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
 
- #name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ #name <- paste0('J:/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  TEST %>% select(-STI, -contains('_version')) # %>% write_csv(  path = name, na = '')
 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
@@ -254,7 +252,7 @@ if(nrow(TEST) > 0){
 # name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
 
- #name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ #name <- paste0('J:/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  TEST %>% select(-STI, -contains('_version')) # %>% write_csv(  path = name, na = '')
 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
@@ -318,7 +316,7 @@ if(nrow(TEST) > 0){
 # name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
 
- name <- paste0('J:/COMMON/STATISTICS/DPAU/DATA/REP_ILO/MICRO/input/OECD_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/OECD_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
  TEST %>% select(-STI, -contains('_version')) %>% write_csv(  path = name, na = '')
 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )

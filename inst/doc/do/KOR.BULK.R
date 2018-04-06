@@ -28,7 +28,7 @@ Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Defi
 for (i in 1:length(Mapping_File$NAME)){
 
 	print(paste0(i, '/ ', Mapping_File$NAME[i]))
-	X <- download_data_KOR(Mapping_File %>% slice(i), TIME_WAIT = 2) %>% mutate(OBS_VALUE = as.numeric(OBS_VALUE))
+	X <- download_data_KOR(Mapping_File %>% slice(i), TIME_WAIT = 1) %>% mutate(OBS_VALUE = as.numeric(OBS_VALUE))
 
 	
 	print(paste0(Mapping_File$NAME[i], '/ download -> ', nrow(X)))

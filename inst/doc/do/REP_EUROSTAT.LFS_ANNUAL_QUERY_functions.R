@@ -15,7 +15,7 @@
 
 	
 		
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_141 					<- 	function(){ # WAP, EAP, EMP, UNE, EIP, SEX_AGE, 5, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_141 					<- 	function(timeto = 2005){ # WAP, EAP, EMP, UNE, EIP, SEX_AGE, 5, 10, agg, yth 
 ref_file <- 'ILO_POP_141.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -30,6 +30,7 @@ ref_file <- 'ILO_POP_141.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>% 
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -49,13 +50,13 @@ ref_file <- 'ILO_POP_141.csv'
 					))
 																
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 	
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_5YRBANDS_TOTAL' 	=  'AGE_10YRBANDS_TOTAL', 
 														'AGE_5YRBANDS_YGE65' 	=  'AGE_10YRBANDS_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_5YRBANDS'))
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) %>% select(-obs_status) %>% spread(indicator, obs_value) %>% ilo:::save_ilo()
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) %>% select(-obs_status) %>% spread(classif1, obs_value) %>% ilo:::save_ilo()
@@ -69,7 +70,7 @@ ref_file <- 'ILO_POP_141.csv'
 
 											
 		
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) %>% select(-obs_status) %>% spread(indicator, obs_value) %>% ilo:::save_ilo()
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) %>% select(-obs_status) %>% spread(classif1, obs_value) %>% ilo:::save_ilo()
@@ -79,7 +80,7 @@ ref_file <- 'ILO_POP_141.csv'
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 	
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) %>% select(-obs_status) %>% spread(indicator, obs_value) %>% ilo:::save_ilo()
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) %>% select(-obs_status) %>% spread(classif1, obs_value) %>% ilo:::save_ilo()
@@ -91,7 +92,7 @@ ref_file <- 'ILO_POP_141.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_142 					<- 	function(){ # WAP, EAP, EMP, UNE, EIP, SEX_AGE_EDU, 10, agg, yth, isced11, isced97, agg 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_142 					<- 	function(timeto = 2005){ # WAP, EAP, EMP, UNE, EIP, SEX_AGE_EDU, 10, agg, yth, isced11, isced97, agg 
 ref_file <- 'ILO_POP_142.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -110,6 +111,7 @@ ref_file <- 'ILO_POP_142.csv'
 															
 																	
 																), progress = FALSE ) %>% 
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -136,14 +138,14 @@ ref_file <- 'ILO_POP_142.csv'
 	
 	################## add remapping EDU aggregate
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_ISCED11.csv")), showProgress = FALSE)															
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_ISCED97.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_ISCED11_",timeto,".csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_ISCED97_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'EDU_ISCED11_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED97_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED11_X' = 'EDU_AGGREGATE_X', 
 												'EDU_ISCED97_UNK' = 'EDU_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_10YRBANDS'), str_detect(classif2, 'EDU_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_10YRBANDS'), str_detect(classif2, 'EDU_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_EDU_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -152,28 +154,28 @@ ref_file <- 'ILO_POP_142.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_ISCED11.csv")), showProgress = FALSE)															
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_ISCED97.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_ISCED11_",timeto,".csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_ISCED97_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'EDU_ISCED11_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED97_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED11_X' = 'EDU_AGGREGATE_X', 
 												'EDU_ISCED97_UNK' = 'EDU_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_AGGREGATE'), str_detect(classif2, 'EDU_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_AGGREGATE'), str_detect(classif2, 'EDU_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_EDU_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 			############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_ISCED11.csv")), showProgress = FALSE)															
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_ISCED97.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'EDU_ISCED11')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_ISCED11_",timeto,".csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'EDU_ISCED97')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_ISCED97_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'EDU_ISCED11_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED97_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED11_X' = 'EDU_AGGREGATE_X', 
 												'EDU_ISCED97_UNK' = 'EDU_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_YTHADULT'), str_detect(classif2, 'EDU_AGGREGATE')), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_YTHADULT'), str_detect(classif2, 'EDU_AGGREGATE')), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_EDU_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 
 	rm(X)
@@ -183,7 +185,7 @@ ref_file <- 'ILO_POP_142.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_143 					<- 	function(){	# WAP, EAP, EMP, UNE, EIP, SEX_AGE_GEO, 5, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_POP_143 					<- 	function(timeto = 2005){	# WAP, EAP, EMP, UNE, EIP, SEX_AGE_GEO, 5, 10, agg, yth 
 ref_file <- 'ILO_POP_143.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -199,6 +201,7 @@ ref_file <- 'ILO_POP_143.csv'
 																		FLAG_BREAK = col_character()
 																		#COUNTRY_ORDER = col_character()
 																	), progress = FALSE ) %>% 
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -222,7 +225,7 @@ ref_file <- 'ILO_POP_143.csv'
 
 	############ prepare indicator file by 10 years bands
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -231,13 +234,13 @@ ref_file <- 'ILO_POP_143.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 	
 	rm(X)
 
@@ -246,7 +249,7 @@ ref_file <- 'ILO_POP_143.csv'
 	
 }
 		
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EAP_6 						<- 	function(){ # LFPR, SEX_AGE, 5, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EAP_6 						<- 	function(timeto = 2005){ # LFPR, SEX_AGE, 5, 10, agg, yth 
 ref_file <- 'ILO_EAP_6.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -263,6 +266,7 @@ ref_file <- 'ILO_EAP_6.csv'
 																	FLAG_BREAK = col_character()
 																	# COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EAP_DWAP_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -282,14 +286,14 @@ ref_file <- 'ILO_EAP_6.csv'
 																
 
 	############ prepare indicator file by 5 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_5YRBANDS_TOTAL' 	=  'AGE_10YRBANDS_TOTAL', 
 														'AGE_5YRBANDS_YGE65' 	=  'AGE_10YRBANDS_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_5YRBANDS'))
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -298,7 +302,7 @@ ref_file <- 'ILO_EAP_6.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
@@ -306,7 +310,7 @@ ref_file <- 'ILO_EAP_6.csv'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -315,7 +319,7 @@ ref_file <- 'ILO_EAP_6.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_15 						<- 	function(){ # EMP, SEX_STE icse93, agg 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_15 						<- 	function(timeto = 2005){ # EMP, SEX_STE icse93, agg 
 ref_file <- 'ILO_EMP_15.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -329,6 +333,7 @@ ref_file <- 'ILO_EMP_15.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EMP_TEMP_SEX_STE_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -347,7 +352,7 @@ ref_file <- 'ILO_EMP_15.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'STE_ICSE93')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_STE_ICSE93.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'STE_ICSE93')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_STE_ICSE93_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	############ prepare indicator file by agg years bands
@@ -356,7 +361,7 @@ ref_file <- 'ILO_EMP_15.csv'
 														'STE_ICSE93_TOTAL' 	=  'STE_AGGREGATE_TOTAL'
 														)) %>% filter(!str_detect(classif1, 'STE_ICSE93'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'STE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_STE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'STE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_STE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -365,7 +370,7 @@ ref_file <- 'ILO_EMP_15.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_95_NaceRev1 			<- 	function(){ # EMP, SEX_ECO isic3 agg sector OK
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_95_NaceRev1 			<- 	function(timeto = 2005){ # EMP, SEX_ECO isic3 agg sector OK
 ref_file <- 'ILO_EMP_95_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -380,6 +385,7 @@ ref_file <- 'ILO_EMP_95_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -398,14 +404,14 @@ ref_file <- 'ILO_EMP_95_NaceRev1.csv'
 	
 	################## add ECO_ISIC3
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC3_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC3_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC3'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>% 	mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL', # ok
@@ -415,7 +421,7 @@ ref_file <- 'ILO_EMP_95_NaceRev1.csv'
 														
 
 														
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -425,7 +431,7 @@ ref_file <- 'ILO_EMP_95_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_96_NaceRev2 			<- 	function(){ # EMP, SEX_ECO isic4 agg sector IND
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_96_NaceRev2 			<- 	function(timeto = 2005){ # EMP, SEX_ECO isic4 agg sector IND
 ref_file <- 'ILO_EMP_96_NaceRev2.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -440,6 +446,7 @@ ref_file <- 'ILO_EMP_96_NaceRev2.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -458,14 +465,14 @@ ref_file <- 'ILO_EMP_96_NaceRev2.csv'
 	
 	################## add ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC4_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -478,7 +485,7 @@ ref_file <- 'ILO_EMP_96_NaceRev2.csv'
 														
 														
 														
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -488,7 +495,7 @@ ref_file <- 'ILO_EMP_96_NaceRev2.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NaceRev1 			<- 	function(){ # EMP, SEX_ECO2 isic3 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NaceRev1 			<- 	function(timeto = 2005){ # EMP, SEX_ECO2 isic3 2 digits agg sector 
 ref_file <- 'ILO_EMP_97_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -503,6 +510,7 @@ ref_file <- 'ILO_EMP_97_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -522,7 +530,7 @@ ref_file <- 'ILO_EMP_97_NaceRev1.csv'
 	
 	################## add ECO_ISIC3
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_EQISIC4ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_EQISIC4ISIC3.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_EQISIC4ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_EQISIC4ISIC3_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 
@@ -534,7 +542,7 @@ ref_file <- 'ILO_EMP_97_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NaceRev2 			<- 	function(){ # EMP, SEX_ECO2 isic4 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NaceRev2 			<- 	function(timeto = 2005){ # EMP, SEX_ECO2 isic4 2 digits agg sector 
 ref_file <- 'ILO_EMP_97_NaceRev2.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -549,6 +557,7 @@ ref_file <- 'ILO_EMP_97_NaceRev2.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -567,7 +576,7 @@ ref_file <- 'ILO_EMP_97_NaceRev2.csv'
 	
 	################## add ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_2digit.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_2digit_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -576,7 +585,7 @@ ref_file <- 'ILO_EMP_97_NaceRev2.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_100_Isco88 				<- 	function(){ # EMP, SEX_OCU isco 88 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_100_Isco88 				<- 	function(timeto = 2005){ # EMP, SEX_OCU isco 88 skill 					
 ref_file <- 'ILO_EMP_100_Isco88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -591,6 +600,7 @@ ref_file <- 'ILO_EMP_100_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -613,7 +623,7 @@ ref_file <- 'ILO_EMP_100_Isco88.csv'
 	
 	################## add OCU_ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -630,6 +640,7 @@ ref_file <- 'ILO_EMP_100_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																) ) %>% 
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -653,7 +664,7 @@ ref_file <- 'ILO_EMP_100_Isco88.csv'
 		ungroup
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -663,7 +674,7 @@ ref_file <- 'ILO_EMP_100_Isco88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_100_Isco08 				<- 	function(){ # EMP, SEX_OCU isco 08 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_100_Isco08 				<- 	function(timeto = 2005){ # EMP, SEX_OCU isco 08 skill 					
 ref_file <- 'ILO_EMP_100_Isco08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -678,6 +689,7 @@ ref_file <- 'ILO_EMP_100_Isco08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -696,7 +708,7 @@ ref_file <- 'ILO_EMP_100_Isco08.csv'
 	
 	################## add OCU_ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -706,7 +718,7 @@ ref_file <- 'ILO_EMP_100_Isco08.csv'
 														'OCU_ISCO08_9' =  'OCU_SKILL_L1' )) %>% 
 		filter(!str_detect(classif1, 'OCU_ISCO08')) 
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -716,7 +728,7 @@ ref_file <- 'ILO_EMP_100_Isco08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_Isco88 				<- 	function(){ # EMP, SEX_OCU2 isco88 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_Isco88 				<- 	function(timeto = 2005){ # EMP, SEX_OCU2 isco88 2 digits agg sector 
 ref_file <- 'ILO_EMP_102_Isco88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -731,6 +743,7 @@ ref_file <- 'ILO_EMP_102_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -753,7 +766,7 @@ ref_file <- 'ILO_EMP_102_Isco88.csv'
 	
 	################## add OCU_isco88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_EQISCO08ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_EQISCO08ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_EQISCO08ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_EQISCO08ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 
@@ -765,7 +778,7 @@ ref_file <- 'ILO_EMP_102_Isco88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_Isco08		 		<- 	function(){ # EMP, SEX_OCU2 isco08 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_Isco08		 		<- 	function(timeto = 2005){ # EMP, SEX_OCU2 isco08 2 digits agg sector 
 ref_file <- 'ILO_EMP_102_Isco08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -780,6 +793,7 @@ ref_file <- 'ILO_EMP_102_Isco08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -798,7 +812,7 @@ ref_file <- 'ILO_EMP_102_Isco08.csv'
 	
 	################## add OCU_isco88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08_2digit.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08_2digit_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 
@@ -810,7 +824,7 @@ ref_file <- 'ILO_EMP_102_Isco08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev1_Isco88 	<- 	function(){ # EMP, ECO_OCU isic3, agg sectpr & isco 88 skill 	IND				
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev1_Isco88 	<- 	function(timeto = 2005){ # EMP, ECO_OCU isic3, agg sectpr & isco 88 skill 	IND				
 ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -826,6 +840,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -850,7 +865,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 	
 	################## add OCU_ISCO88 ECO_ISIC3
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO88'), str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO88'), str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	############ prepare indicator file 
@@ -859,7 +874,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 															'ECO_ISIC3_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC3'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -867,7 +882,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 														'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE')) 
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 	
 	
 	
@@ -886,6 +901,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																) ) %>% 
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -911,7 +927,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 		ungroup
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC3')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC3')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file 
 	X <- X %>%		filter(	str_detect(classif2, 'OCU_SKILL')) %>% 
@@ -919,7 +935,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 															'ECO_ISIC3_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC3'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -932,7 +948,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 														
 												
 		
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	rm(X)
 
@@ -941,7 +957,7 @@ ref_file <- 'ILO_EMP_109_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev2_Isco88 	<- 	function(){ # EMP, ECO_OCU isic4, agg sectpr & isco 88 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev2_Isco88 	<- 	function(timeto = 2005){ # EMP, ECO_OCU isic4, agg sectpr & isco 88 skill 					
 ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -957,6 +973,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -976,7 +993,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 										
 	################## add OCU_ISCO88 ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO88'), str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO88'), str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	############ prepare indicator file 
@@ -985,7 +1002,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 															'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -993,7 +1010,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 														'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE')) 
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 	
 	
 	
@@ -1012,6 +1029,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1032,7 +1050,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 		filter(!str_detect(classif2, 'OCU_ISCO88')) 
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC4')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC4')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file 
 	X <- X %>%		filter(	str_detect(classif2, 'OCU_SKILL')) %>% 
@@ -1040,7 +1058,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 															'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1050,7 +1068,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 
 											
 																
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	rm(X)
 
@@ -1059,7 +1077,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev2_Isco08 	<- 	function(){ # EMP, ECO_OCU isic4, agg sectpr & isco 08 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_109_NaceRev2_Isco08 	<- 	function(timeto = 2005){ # EMP, ECO_OCU isic4, agg sectpr & isco 08 skill 					
 ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1075,6 +1093,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1094,7 +1113,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 										
 	################## add OCU_ISCO08 ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO08'), str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_ISCO08'), str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	############ prepare indicator file 
@@ -1103,7 +1122,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 															'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1111,7 +1130,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 														'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE'))  
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 	
 	
 	
@@ -1130,6 +1149,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1151,7 +1171,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 		filter(!str_detect(classif2, 'OCU_ISCO08')) 
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC4')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif2, 'OCU_SKILL') , str_detect(classif1, 'ECO_ISIC4')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file 
 	X <- X %>%		filter(	str_detect(classif2, 'OCU_SKILL')) %>% 
@@ -1159,7 +1179,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 															'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1167,7 +1187,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 														'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE')) 
 
-		data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL.csv")), showProgress = FALSE)															
+		data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 	rm(X)
 
@@ -1176,7 +1196,7 @@ ref_file <- 'ILO_EMP_109_NaceRev2_ISCO08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_105 					<- 	function(){ # UNE, SEX_CAT
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_105 					<- 	function(timeto = 2005){ # UNE, SEX_CAT
 ref_file <- 'ILO_EMP_105.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1191,6 +1211,7 @@ ref_file <- 'ILO_EMP_105.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1209,7 +1230,7 @@ ref_file <- 'ILO_EMP_105.csv'
 	
 
 	############ prepare segment previous and other
-	data.table:::fwrite(X , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), ".csv")), showProgress = FALSE)				
+	data.table:::fwrite(X , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_",timeto,".csv")), showProgress = FALSE)				
 
 	rm(X)
 
@@ -1218,7 +1239,7 @@ ref_file <- 'ILO_EMP_105.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_12 						<- 	function(){ # EPR, SEX_AGE, 5, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_12 						<- 	function(timeto = 2005){ # EPR, SEX_AGE, 5, 10, agg, yth 
 ref_file <- 'ILO_EMP_12.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1235,6 +1256,7 @@ ref_file <- 'ILO_EMP_12.csv'
 																	FLAG_BREAK = col_character()
 																	# COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EMP_DWAP_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1256,14 +1278,14 @@ ref_file <- 'ILO_EMP_12.csv'
 	
 	########### prepare indicator file by 5 years bands
 	# saveRDS(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')	, indicator %in% 'EMP_DWAP_SEX_AGE_RT')	, file = paste0('./input/indicator/indicator/EMP_DWAP_SEX_AGE_RT.AGE_5YRBANDS.rds'))														
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	########### prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_5YRBANDS_TOTAL' 	=  'AGE_10YRBANDS_TOTAL', 
 														 'AGE_5YRBANDS_YGE65' 	=  'AGE_10YRBANDS_YGE65'
 														 )) %>% filter(!str_detect(classif1, 'AGE_5YRBANDS'))
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1272,14 +1294,14 @@ ref_file <- 'ILO_EMP_12.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -1288,7 +1310,7 @@ ref_file <- 'ILO_EMP_12.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_20 						<- 	function(){ # EMP, ftpt, SEX_AGE_JOB, 10, agg, yth, time
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_20 						<- 	function(timeto = 2005){ # EMP, ftpt, SEX_AGE_JOB, 10, agg, yth, time
 ref_file <- 'ILO_EMP_20.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1303,6 +1325,7 @@ ref_file <- 'ILO_EMP_20.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EMP_TEMP_SEX_AGE_JOB_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1323,7 +1346,7 @@ ref_file <- 'ILO_EMP_20.csv'
 
 	############ prepare indicator file by 10 years bands
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1332,14 +1355,14 @@ ref_file <- 'ILO_EMP_20.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 	
 	rm(X)
 
@@ -1348,7 +1371,7 @@ ref_file <- 'ILO_EMP_20.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EES_21 						<- 	function(){ # EES, SEX_AGE_JOB, 10, agg, yth, contract 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EES_21 						<- 	function(timeto = 2005){ # EES, SEX_AGE_JOB, 10, agg, yth, contract 
 ref_file <- 'ILO_EES_21.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1363,6 +1386,7 @@ ref_file <- 'ILO_EES_21.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EES_TEES_SEX_AGE_JOB_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1384,7 +1408,7 @@ ref_file <- 'ILO_EES_21.csv'
 	
 	############ prepare indicator file by 10 years bands
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1393,14 +1417,14 @@ ref_file <- 'ILO_EES_21.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -1409,7 +1433,7 @@ ref_file <- 'ILO_EES_21.csv'
 	
 }
 		
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_24 						<- 	function(){ # TRU, SEX_AGE, 10, agg, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_24 						<- 	function(timeto = 2005){ # TRU, SEX_AGE, 10, agg, yth
 ref_file <- 'ILO_TRU_24.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1423,6 +1447,7 @@ ref_file <- 'ILO_TRU_24.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'TRU_TTRU_SEX_AGE_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1441,7 +1466,7 @@ ref_file <- 'ILO_TRU_24.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1450,14 +1475,14 @@ ref_file <- 'ILO_TRU_24.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -1466,7 +1491,7 @@ ref_file <- 'ILO_TRU_24.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_26_NaceRev1 			<- 	function(){ # TRU, SEX_ECO, agg <2008, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_26_NaceRev1 			<- 	function(timeto = 2005){ # TRU, SEX_ECO, agg <2008, yth
 ref_file <- 'ILO_TRU_26_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1480,6 +1505,7 @@ ref_file <- 'ILO_TRU_26_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'TRU_TTRU_SEX_ECO_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1497,7 +1523,7 @@ ref_file <- 'ILO_TRU_26_NaceRev1.csv'
 
 	################## add ECO_AGGREGATE
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by eco sector
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1508,7 +1534,7 @@ ref_file <- 'ILO_TRU_26_NaceRev1.csv'
 														
 
 		
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 		
 	rm(X)
 
@@ -1517,7 +1543,7 @@ ref_file <- 'ILO_TRU_26_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_26_NaceRev2 			<- 	function(){ # TRU, SEX_ECO, agg >2008, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_TRU_26_NaceRev2 			<- 	function(timeto = 2005){ # TRU, SEX_ECO, agg >2008, yth
 ref_file <- 'ILO_TRU_26_NaceRev2.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1531,6 +1557,7 @@ ref_file <- 'ILO_TRU_26_NaceRev2.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'TRU_TTRU_SEX_ECO_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1548,7 +1575,7 @@ ref_file <- 'ILO_TRU_26_NaceRev2.csv'
 
 	################## add ECO_AGGREGATE
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by eco sector
 	X <- X %>% filter(!classif1 %in% 'ECO_SECTOR_IND') %>% 
@@ -1560,7 +1587,7 @@ ref_file <- 'ILO_TRU_26_NaceRev2.csv'
 														
 											
 		
-		data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+		data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 		
 	rm(X)
 
@@ -1569,7 +1596,7 @@ ref_file <- 'ILO_TRU_26_NaceRev2.csv'
 	
 }
 		
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_29 						<- 	function(){ # UR, SEX_AGE, 5, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_29 						<- 	function(timeto = 2005){ # UR, SEX_AGE, 5, 10, agg, yth 
 ref_file <- 'ILO_UNE_29.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1585,6 +1612,7 @@ ref_file <- 'ILO_UNE_29.csv'
 																	FLAG_BREAK = col_character()
 																	# COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_DEAP_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1604,14 +1632,14 @@ ref_file <- 'ILO_UNE_29.csv'
 	
 	
 	############ prepare indicator file by 5 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_5YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_5YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_5YRBANDS_TOTAL' 	=  'AGE_10YRBANDS_TOTAL', 
 														'AGE_5YRBANDS_YGE65' 	=  'AGE_10YRBANDS_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_5YRBANDS'))
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1620,14 +1648,14 @@ ref_file <- 'ILO_UNE_29.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -1636,7 +1664,7 @@ ref_file <- 'ILO_UNE_29.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_31 						<- 	function(){ # UNE SEX_AGE_DUR agg, yth, dur_details, agg 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_31 						<- 	function(timeto = 2005){ # UNE SEX_AGE_DUR agg, yth, dur_details, agg 
 ref_file <- 'ILO_UNE_31.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1651,6 +1679,7 @@ ref_file <- 'ILO_UNE_31.csv'
 																	FLAG_BREAK = col_character()
 																	# COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_AGE_DUR_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1672,12 +1701,12 @@ ref_file <- 'ILO_UNE_31.csv'
 	
 	################## add remapping EDU aggregate
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_DUR_DETAILS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_DUR_DETAILS_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'DUR_DETAILS_TOTAL' = 'DUR_AGGREGATE_TOTAL', 
 												'DUR_DETAILS_MGE6LT12' = 'DUR_AGGREGATE_MGE6LT12', 
 												'DUR_DETAILS_X' = 'DUR_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_10YRBANDS'), str_detect(classif2, 'DUR_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_DUR_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_10YRBANDS'), str_detect(classif2, 'DUR_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_DUR_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -1686,25 +1715,25 @@ ref_file <- 'ILO_UNE_31.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_DUR_DETAILS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_DUR_DETAILS_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'DUR_DETAILS_TOTAL' = 'DUR_AGGREGATE_TOTAL', 
 												'DUR_DETAILS_MGE6LT12' = 'DUR_AGGREGATE_MGE6LT12', 
 												'DUR_DETAILS_X' = 'DUR_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_AGGREGATE'), str_detect(classif2, 'DUR_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_DUR_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_AGGREGATE'), str_detect(classif2, 'DUR_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_DUR_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 			############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_DUR_DETAILS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT') , str_detect(classif2, 'DUR_DETAILS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_DUR_DETAILS_",timeto,".csv")), showProgress = FALSE)															
 	data.table:::fwrite(X %>% 	mutate(classif2 = classif2 %>% recode(
 												'EDU_ISCED11_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED97_TOTAL' = 'EDU_AGGREGATE_TOTAL', 
 												'EDU_ISCED11_UNK' = 'EDU_AGGREGATE_X', 
 												'EDU_ISCED97_UNK' = 'EDU_AGGREGATE_X')) %>%
-					filter(	str_detect(classif1, 'AGE_YTHADULT'), str_detect(classif2, 'DUR_AGGREGATE')), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_DUR_AGGREGATE.csv")), showProgress = FALSE)															
+					filter(	str_detect(classif1, 'AGE_YTHADULT'), str_detect(classif2, 'DUR_AGGREGATE')), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_DUR_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 
 	rm(X)
@@ -1714,7 +1743,7 @@ ref_file <- 'ILO_UNE_31.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_34 						<- 	function(){ # UNE, SEX_CAT
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_34 						<- 	function(timeto = 2005){ # UNE, SEX_CAT
 ref_file <- 'ILO_UNE_34.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1728,6 +1757,7 @@ ref_file <- 'ILO_UNE_34.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_CAT_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1750,9 +1780,9 @@ ref_file <- 'ILO_UNE_34.csv'
 				filter(!ref %in% 'CAT_UNE_TOTAL / CAT_UNE_UNK') %>% select(-ref)
 
 	############ prepare segment previous and other
-	data.table:::fwrite(X %>% filter(!classif1 %in% 'CAT_UNE_PRE'), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OTHER.csv")), showProgress = FALSE)				
+	data.table:::fwrite(X %>% filter(!classif1 %in% 'CAT_UNE_PRE'), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OTHER_",timeto,".csv")), showProgress = FALSE)				
 
-	data.table:::fwrite(X %>% filter(classif1 %in% 'CAT_UNE_PRE'), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_CAT_UNE_PRE.csv")), showProgress = FALSE)				
+	data.table:::fwrite(X %>% filter(classif1 %in% 'CAT_UNE_PRE'), file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_CAT_UNE_PRE_",timeto,".csv")), showProgress = FALSE)				
 	
 	rm(X)
 
@@ -1761,7 +1791,7 @@ ref_file <- 'ILO_UNE_34.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_35_NacePRev1 			<- 	function(){ # UNE, SEX_ECO prev isic3, aggr, sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_35_NacePRev1 			<- 	function(timeto = 2005){ # UNE, SEX_ECO prev isic3, aggr, sector 
 ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1775,6 +1805,7 @@ ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_ECO_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1793,7 +1824,7 @@ ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 										
 	############ prepare segment previous and other
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -1839,14 +1870,14 @@ ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 	
 	
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC3_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC3_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC3'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%   mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1856,7 +1887,7 @@ ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 
 												
 		
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -1866,7 +1897,7 @@ ref_file <- 'ILO_UNE_35_NacePRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_35_NacePRev2 			<- 	function(){ # UNE, SEX_ECO prev isic4, aggr, sector  
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_35_NacePRev2 			<- 	function(timeto = 2005){ # UNE, SEX_ECO prev isic4, aggr, sector  
 ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1880,6 +1911,7 @@ ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_ECO_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -1897,7 +1929,7 @@ ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 										
 										
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -1942,14 +1974,14 @@ ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 	
 ################## add ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC4_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	X <- X %>%  mutate(classif1 = classif1  %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -1958,7 +1990,7 @@ ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 														)) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE')) 
 											
 		
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -1968,7 +2000,7 @@ ref_file <- 'ILO_UNE_35_NacePRev2.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_36_Isco88 				<- 	function(){ # UNE, SEX_OCU isco 88 skill 			 		
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_36_Isco88 				<- 	function(timeto = 2005){ # UNE, SEX_OCU isco 88 skill 			 		
 ref_file <- 'ILO_UNE_36_Isco88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -1982,6 +2014,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_OCU_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2005,7 +2038,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 	
 	############ prepare segment previous and other
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -2046,7 +2079,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 	
 	################## add OCU_ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -2062,6 +2095,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_OCU_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2086,7 +2120,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 	
 	############ prepare segment previous and other
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -2132,7 +2166,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 		
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2142,7 +2176,7 @@ ref_file <- 'ILO_UNE_36_Isco88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_36_Isco08 				<- 	function(){ # UNE, SEX_OCU isco 08 skill 			 		
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_UNE_36_Isco08 				<- 	function(timeto = 2005){ # UNE, SEX_OCU isco 08 skill 			 		
 ref_file <- 'ILO_UNE_36_Isco08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2156,6 +2190,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_OCU_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2181,7 +2216,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 	
 	############ prepare segment previous and other
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -2223,7 +2258,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 	
 	################## add OCU_ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -2239,6 +2274,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'UNE_TUNE_SEX_OCU_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2263,7 +2299,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 	
 	############ prepare segment previous and other
 
-	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE.csv'), 	col_types = cols(
+	REF <- read_csv(paste0('./input/indicator/ILO_UNE_34_CAT_UNE_PRE_',timeto,'.csv'), 	col_types = cols(
 																					ref_area = col_character(),
 																					time = col_integer(),
 																					sex = col_character(),
@@ -2309,7 +2345,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 		
 		
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2319,7 +2355,7 @@ ref_file <- 'ILO_UNE_36_Isco08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_39 						<- 	function(){ # DIS, SEX_AGE, 10, agg, yth 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_39 						<- 	function(timeto = 2005){ # DIS, SEX_AGE, 10, agg, yth 
 ref_file <- 'ILO_EIP_39.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2333,6 +2369,7 @@ ref_file <- 'ILO_EIP_39.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EIP_WDIS_SEX_AGE_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2351,7 +2388,7 @@ ref_file <- 'ILO_EIP_39.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) %>% select(-obs_status) %>% spread(classif1, obs_value) %>% ilo:::save_ilo()
 	# test OK	X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) %>% select(-obs_status) %>% spread(sex, obs_value) %>% ilo:::save_ilo()
@@ -2364,14 +2401,14 @@ ref_file <- 'ILO_EIP_39.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by yth years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2380,7 +2417,7 @@ ref_file <- 'ILO_EIP_39.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_YTH_40 						<- 	function(){ # NEET, SEX 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_YTH_40 						<- 	function(timeto = 2005){ # NEET, SEX 
 ref_file <- 'ILO_YTH_40.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2393,6 +2430,7 @@ ref_file <- 'ILO_YTH_40.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EIP_NEET_SEX_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2407,7 +2445,7 @@ ref_file <- 'ILO_YTH_40.csv'
 										))
 													
 																								
-	data.table:::fwrite(X , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), ".csv")), showProgress = FALSE)															
+	data.table:::fwrite(X , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_",timeto,".csv")), showProgress = FALSE)															
 
 													
 	rm(X)
@@ -2417,7 +2455,7 @@ ref_file <- 'ILO_YTH_40.csv'
 	
 }
 	
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_145_NaceRev1 			<- 	function(){ # HOW, SEX_ECO isic3 agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_145_NaceRev1 			<- 	function(timeto = 2005){ # HOW, SEX_ECO isic3 agg sector 
 ref_file <- 'ILO_HOW_145_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2433,6 +2471,7 @@ ref_file <- 'ILO_HOW_145_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2451,14 +2490,14 @@ ref_file <- 'ILO_HOW_145_NaceRev1.csv'
 	
 	################## add ECO_ISIC3
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC3_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC3_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC3_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC3'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file 
 	 X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -2466,7 +2505,7 @@ ref_file <- 'ILO_HOW_145_NaceRev1.csv'
 														 'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														 )) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE'))
 
-	 data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	 data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2476,7 +2515,7 @@ ref_file <- 'ILO_HOW_145_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_146_NaceRev2 			<- 	function(){ # HOW, SEX_ECO isic4 agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_146_NaceRev2 			<- 	function(timeto = 2005){ # HOW, SEX_ECO isic4 agg sector 
 ref_file <- 'ILO_HOW_146_NaceRev2.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2492,6 +2531,7 @@ ref_file <- 'ILO_HOW_146_NaceRev2.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2510,14 +2550,14 @@ ref_file <- 'ILO_HOW_146_NaceRev2.csv'
 	
 	################## add ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "ECO_ISIC4_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_ISIC4_TOTAL' 	=  'ECO_AGGREGATE_TOTAL', 
 														'ECO_ISIC4_X'  =  'ECO_AGGREGATE_X'
 														)) %>% filter(!str_detect(classif1, 'ECO_ISIC4'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_AGGREGATE') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 	
 	############ prepare indicator file by 10 years bands
 	 X <- X %>% mutate(classif1 = classif1 %>% recode(	'ECO_AGGREGATE_TOTAL' 	=  'ECO_SECTOR_TOTAL',
@@ -2525,7 +2565,7 @@ ref_file <- 'ILO_HOW_146_NaceRev2.csv'
 														 'ECO_AGGREGATE_X'  =  'ECO_SECTOR_X'
 														 )) %>% filter(!str_detect(classif1, 'ECO_AGGREGATE'))
 
-	 data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR.csv")), showProgress = FALSE)															
+	 data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_SECTOR') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SECTOR_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2535,7 +2575,7 @@ ref_file <- 'ILO_HOW_146_NaceRev2.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_147_NaceRev1 			<- 	function(){ # HOW, SEX_ECO2 isic3 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_147_NaceRev1 			<- 	function(timeto = 2005){ # HOW, SEX_ECO2 isic3 2 digits agg sector 
 ref_file <- 'ILO_HOW_147_NaceRev1.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2551,6 +2591,7 @@ ref_file <- 'ILO_HOW_147_NaceRev1.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2569,7 +2610,7 @@ ref_file <- 'ILO_HOW_147_NaceRev1.csv'
 	
 	################## add ECO_ISIC3
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_EQISIC4ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_EQISIC4ISIC3.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_EQISIC4ISIC3') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_EQISIC4ISIC3_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by 10 years bands
 
@@ -2581,7 +2622,7 @@ ref_file <- 'ILO_HOW_147_NaceRev1.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_148_NaceRev2_NACE2D 	<- 	function(){ # HOW, SEX_ECO2 isic4 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_148_NaceRev2_NACE2D 	<- 	function(timeto = 2005){ # HOW, SEX_ECO2 isic4 2 digits agg sector 
 ref_file <- 'ILO_HOW_148_NaceRev2_NACE2D.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2597,6 +2638,7 @@ ref_file <- 'ILO_HOW_148_NaceRev2_NACE2D.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG))%>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2615,7 +2657,7 @@ ref_file <- 'ILO_HOW_148_NaceRev2_NACE2D.csv'
 	
 	################## add ECO_ISIC4
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_2digit.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'ECO_ISIC4') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC4_2digit_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2624,7 +2666,7 @@ ref_file <- 'ILO_HOW_148_NaceRev2_NACE2D.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_149_Isco88 				<- 	function(){ # HOW, SEX_OCU isco 88 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_149_Isco88 				<- 	function(timeto = 2005){ # HOW, SEX_OCU isco 88 skill 					
 ref_file <- 'ILO_HOW_149_Isco88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2641,7 +2683,8 @@ ref_file <- 'ILO_HOW_149_Isco88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
-			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
+			filter(YEAR < (timeto) + 1) %>%
+						mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
 					classif1 = ISCO1D, 
@@ -2659,7 +2702,7 @@ ref_file <- 'ILO_HOW_149_Isco88.csv'
 	
 	################## add OCU_ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -2667,7 +2710,7 @@ ref_file <- 'ILO_HOW_149_Isco88.csv'
 														'OCU_ISCO88_9' =  'OCU_SKILL_L1') ) %>% 
 		filter(!str_detect(classif1, 'OCU_ISCO88'))
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2677,7 +2720,7 @@ ref_file <- 'ILO_HOW_149_Isco88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_150_Isco08 				<- 	function(){ # HOW, SEX_OCU isco 08 skill 					
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_150_Isco08 				<- 	function(timeto = 2005){ # HOW, SEX_OCU isco 08 skill 					
 ref_file <- 'ILO_HOW_150_Isco08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2694,6 +2737,7 @@ ref_file <- 'ILO_HOW_150_Isco08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2712,7 +2756,7 @@ ref_file <- 'ILO_HOW_150_Isco08.csv'
 	
 	################## add OCU_ISCO08
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO08_",timeto,".csv")), showProgress = FALSE)															
 
 	
 	
@@ -2720,7 +2764,7 @@ ref_file <- 'ILO_HOW_150_Isco08.csv'
 														'OCU_ISCO08_9' =  'OCU_SKILL_L1') ) %>% 
 		filter(!str_detect(classif1, 'OCU_ISCO08'))
 
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_SKILL') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SKILL_",timeto,".csv")), showProgress = FALSE)															
 	
 
 	rm(X)
@@ -2730,7 +2774,7 @@ ref_file <- 'ILO_HOW_150_Isco08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_151_ISCO88 				<- 	function(){ # HOW, SEX_OCU2 isic4 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_151_ISCO88 				<- 	function(timeto = 2005){ # HOW, SEX_OCU2 isic4 2 digits agg sector 
 ref_file <- 'ILO_HOW_151_ISCO88.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2747,6 +2791,7 @@ ref_file <- 'ILO_HOW_151_ISCO88.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2769,7 +2814,7 @@ ref_file <- 'ILO_HOW_151_ISCO88.csv'
 	
 	################## add OCU_EQISCO08ISCO88
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_EQISCO08ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_EQISCO08ISCO88.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_EQISCO08ISCO88') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_EQISCO08ISCO88_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2778,7 +2823,7 @@ ref_file <- 'ILO_HOW_151_ISCO88.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_152_ISCO08				<- 	function(){ # HOW, SEX_OCU2 isic4 2 digits agg sector 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_HOW_152_ISCO08				<- 	function(timeto = 2005){ # HOW, SEX_OCU2 isic4 2 digits agg sector 
 ref_file <- 'ILO_HOW_152_ISCO08.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2795,6 +2840,7 @@ ref_file <- 'ILO_HOW_152_ISCO08.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%																
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% filter(HWACTUAL %in% '1hr or more') %>% select(-FLAG_BREAK, -HWACTUAL) %>%   
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2813,7 +2859,7 @@ ref_file <- 'ILO_HOW_152_ISCO08.csv'
 	
 	################## add OCU_ISCO08
 	
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "OCU_ISCO08_2digit.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'OCU_ISCO08') ) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "OCU_ISCO08_2digit_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2822,7 +2868,7 @@ ref_file <- 'ILO_HOW_152_ISCO08.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_41 						<- 	function(){ # OLF, SEX_AGE, 10, agg, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_41 						<- 	function(timeto = 2005){ # OLF, SEX_AGE, 10, agg, yth
 ref_file <- 'ILO_EIP_41.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2836,6 +2882,7 @@ ref_file <- 'ILO_EIP_41.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%																
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'EIP_WPLF_SEX_AGE_NB') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2854,7 +2901,7 @@ ref_file <- 'ILO_EIP_41.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -2863,14 +2910,14 @@ ref_file <- 'ILO_EIP_41.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2879,7 +2926,7 @@ ref_file <- 'ILO_EIP_41.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_42 						<- 	function(){ # LUU_XLU2_SEX_AGE_RT, SEX_AGE, 10, agg, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_42 						<- 	function(timeto = 2005){ # LUU_XLU2_SEX_AGE_RT, SEX_AGE, 10, agg, yth
 ref_file <- 'ILO_EIP_42.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2893,6 +2940,7 @@ ref_file <- 'ILO_EIP_42.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%																
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'LUU_XLU2_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2911,7 +2959,7 @@ ref_file <- 'ILO_EIP_42.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -2920,14 +2968,14 @@ ref_file <- 'ILO_EIP_42.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2936,7 +2984,7 @@ ref_file <- 'ILO_EIP_42.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_43 						<- 	function(){ # LUU_XLU3_SEX_AGE_RT, SEX_AGE, 10, agg, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_43 						<- 	function(timeto = 2005){ # LUU_XLU3_SEX_AGE_RT, SEX_AGE, 10, agg, yth
 ref_file <- 'ILO_EIP_43.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -2950,6 +2998,7 @@ ref_file <- 'ILO_EIP_43.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'LUU_XLU3_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -2968,7 +3017,7 @@ ref_file <- 'ILO_EIP_43.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -2977,14 +3026,14 @@ ref_file <- 'ILO_EIP_43.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 
@@ -2993,7 +3042,7 @@ ref_file <- 'ILO_EIP_43.csv'
 	
 }
 
-REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_44 						<- 	function(){ # LUU_XLU4_SEX_AGE_RT, SEX_AGE, 10, agg, yth
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_44 						<- 	function(timeto = 2005){ # LUU_XLU4_SEX_AGE_RT, SEX_AGE, 10, agg, yth
 ref_file <- 'ILO_EIP_44.csv'
 	
 	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
@@ -3007,6 +3056,7 @@ ref_file <- 'ILO_EIP_44.csv'
 																	FLAG_BREAK = col_character()
 																	#COUNTRY_ORDER = col_character()
 																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
 			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG), indicator = 'LUU_XLU4_SEX_AGE_RT') %>% select(-FLAG_BREAK) %>%
 			rename(	ref_area 	= 	COUNTRY, 
 					time 		=  	YEAR, 
@@ -3025,7 +3075,7 @@ ref_file <- 'ILO_EIP_44.csv'
 																
 
 	############ prepare indicator file by 10 years bands
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_10YRBANDS')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_10YRBANDS_",timeto,".csv")), showProgress = FALSE)															
 
 	############ prepare indicator file by aggregate years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_10YRBANDS_TOTAL' 	=  'AGE_AGGREGATE_TOTAL', 
@@ -3034,14 +3084,14 @@ ref_file <- 'ILO_EIP_44.csv'
 														'AGE_10YRBANDS_YGE65'	=  'AGE_AGGREGATE_YGE65'
 														)) %>% filter(!str_detect(classif1, 'AGE_10YRBANDS'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_AGGREGATE')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_AGGREGATE_",timeto,".csv")), showProgress = FALSE)															
 
 		############ prepare indicator file by ythadult years bands
 	X <- X %>% mutate(classif1 = classif1 %>% recode(	'AGE_AGGREGATE_TOTAL' 	=  'AGE_YTHADULT_YGE15', 
 														'AGE_AGGREGATE_Y15-24'  =  'AGE_YTHADULT_Y15-24'
 														)) %>% filter(!str_detect(classif1, 'AGE_AGGREGATE'))
 			
-	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT.csv")), showProgress = FALSE)															
+	data.table:::fwrite(X %>% filter(	str_detect(classif1, 'AGE_YTHADULT')) , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_AGE_YTHADULT_",timeto,".csv")), showProgress = FALSE)															
 
 	rm(X)
 

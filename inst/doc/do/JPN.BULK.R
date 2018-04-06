@@ -16,6 +16,7 @@ require(readxl,quietly =TRUE)
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
  Sys.setenv(http_proxy="")
  Sys.setenv(ftp_proxy="")
+
  source(paste0(ilo:::path$data, '/',Target,'/BULK/','do/',Target,'.BULK_functions.r'))
 
 INPUT <- paste0(ilo:::path$data, '/',Target,'/BULK/input/')
@@ -81,7 +82,7 @@ for (i in 1:length(Mapping_File$NAME)){
 	ref_key_ilo <-  paste(ref_key_ilo, collapse = '/')
 
 	# clean
-	REF_MAPPING <- REF_MAPPING %>% 	mutate_each(funs(gsub('&amp;','&', ., fixed = TRUE)), -KEY_ILO) 
+	REF_MAPPING <- REF_MAPPING %>% 	mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) 
 
 	#create key	of X in national language
 	ref_key_nat <- X %>% slice(1) %>% select(-Time, -Value) %>% colnames

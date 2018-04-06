@@ -13,7 +13,7 @@ require(ilo)
 require(Ariane,quietly =TRUE)
 require(stringr,quietly =TRUE)
 require(readxl,quietly =TRUE)
-require(RSelenium)
+require(RSelenium) # test 1.7.1
 # set work directory 
 setwd(paste0(ilo:::path$data, '/AUS/BULK/'))
 Sys.setenv(http_proxy="")

@@ -31,7 +31,7 @@ KEY_ORACLE 	<- c("Lang", "Country_Code", "Country_Label", "Collection_Code", "Co
 
 
 ####################### function download
-download_data_AUS <- function(Mapping_File, Drop = FALSE){
+download_data_AUS_old <- function(Mapping_File, Drop = FALSE){
 
 
 
@@ -91,6 +91,10 @@ remDr$open()
 		}
 	}
 	
+	
+	
+	
+	
 	webElem[[ref]]$findChildElement(using = 'css selector', value = "td > a > img")$clickElement()
 	Sys.sleep(500)
 	
@@ -103,6 +107,85 @@ file.rename(paste0('C:\\temp\\',test),paste0(INPUT, NAME))
 
 remDr$close()
 remDr$closeServer()
+		Sys.sleep(5)
+rm(remDr, webElem) 
+}
+
+for (j in seq_along(XLS)){
+	unzip(paste0(INPUT,NAME), XLS[j], exdir = str_sub(INPUT,1,-2))
+	print(paste0(XLS[j], ' : OK'))
+}
+
+# file.remove(paste0('C:/temp/',NAME))
+
+
+
+}	
+
+download_data_AUS <- function(Mapping_File, Drop = FALSE){
+
+
+
+# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
+	pJS <- phantom()
+shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
+
+NAME <- Mapping_File$ZIP_NAME %>% unique
+URL <- Mapping_File$URL %>% unique
+XLS <- Mapping_File$NAME %>% unique %>% paste0(., '.xls')
+
+#   i <- 1 ;  Mapping_File <- Mapping_File %>% filter(ZIP_NAME %in% zip_file[i]) ; NAME <- Mapping_File$ZIP_NAME %>% unique ; URL <- Mapping_File$URL %>% unique ; XLS <- Mapping_File$NAME %>% unique %>% paste0(., '.xls')
+
+if(Drop %in% FALSE){
+	
+	
+
+remDr <- remoteDriver(browserName = 'phantomjs' )
+
+
+remDr$open()    
+	
+#checkForServer(dir  = 'C:/R/library/RSelenium/bin/')
+
+	remDr$navigate(URL)
+	
+	Sys.sleep(10)
+
+	remDr$getTitle()[[1]]
+
+# go to download
+	
+	webElem <- remDr$findElement('id', 'tabsJ')$findChildElement('link text', 'Downloads')
+	webElem$highlightElement()
+	webElem$clickElement()
+	Sys.sleep(3)	
+
+	webElem$getTitle()[[1]]
+
+# move on tabs	
+	webElem <- remDr$findElements('class name', 'listentry')
+	
+	ref <- NULL
+	for (i in 1:length(webElem)){
+		pass <- webElem[[i]]$getElementText()
+		if(stringr::str_detect( tolower(pass %>% unlist), 'time series spreadsheets')){
+			ref <- i
+		}
+	}
+	
+	
+	myweblink <- webElem[[ref]]$findChildElement(using = 'css selector', value = "td > a")$getElementAttribute('href') %>% unlist
+	
+	download.file(myweblink, paste0('./input/', NAME), mode = 'wb')
+	Sys.sleep(5)
+	
+	
+
+remDr$close()	
+	
+invisible(try(remDr$closeServer(), silent = TRUE))
+pJS$stop()
+rm(pJS)
 		Sys.sleep(5)
 rm(remDr, webElem) 
 }

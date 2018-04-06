@@ -1,8 +1,6 @@
 #############################################################################################
 #	# call user-defined function 
-#MY_Chem <- "I:/COMMON/A0 Short term indicators/" 
-#MY_COLLECTION <- "STI" # "YEARLY" "EAPEP"  "YTHSTAT" "STI"
-#MY_ChemNEW <- paste(MY_Chem,"Collection/COU_CHE/",sep="")
+
 setwd(paste0(ilo:::path$data, 'CHE/SBULK/'))
 
 require(openxlsx)
@@ -32,11 +30,11 @@ REF <- levels(as.factor(substr(Y$SOURCE_CODE,1,2)))
 
 for (i in 1:length(REF)){
 X <- Y[substr(Y$SOURCE_CODE,1,2)%in%REF[i],]
-save(X,file = paste("./0.Ready/COU_CHE_",REF[i],".Rdata",sep=""))
+save(X,file = paste0(ilo:::path$data,"CHE/SBULK/input/COU_CHE_",REF[i],".Rdata"))
 }
 
 
-REF <- cbind(PATH = paste("J:/COMMON/STATISTICS/DPAU/DATA/CHE/SBULK/output/COU_CHE_",REF,".Rdata",sep=""),ID = NA, Types  ="CL", REF = NA)
+REF <- cbind(PATH = paste(ilo:::path$data,"CHE/SBULK/output/COU_CHE_",REF,".Rdata",sep=""),ID = NA, Types  ="CL", REF = NA)
 write.csv(REF,paste("./FileToLoad.csv",sep=""),row.names = FALSE,na="")
 
 

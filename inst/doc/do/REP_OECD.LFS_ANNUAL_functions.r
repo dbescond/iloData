@@ -3,24 +3,33 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_EMP_SEX_ECO_ISIC3 <- function()  { # Employment
 
 	### STEP 1 Loading local data obtained from link described above
 
-	input_path	<- paste0(getwd(),'/input/ANNUAL_EMP_SEX_ECO_ISIC3.csv')
+	X 	<-	read_csv(paste0(getwd(),'/input/ANNUAL_EMP_SEX_ECO_ISIC3.csv'))
 	
-	X 	<- read_delim(input_path, delim = ',')
-	colnames(X)[1] <- 'ref_area'
-	
-	X <- X %>% select(	ref_area,	SUBJECT,	Subject,	sex = Sex,	time = Time,	obs_value = Value,	obs_status = `Flag Codes`)   %>% filter(as.numeric(time) <2009 )	
+
+	X <- X %>% select(	ref_area,	SUBJECT,	subject,	sex ,	time ,	obs_value ,	obs_status )   %>% filter(time <2009 )	
   
 	
 	### STEP 2 Extract and Separate Information of the indicators
-  
-	
-	Xp <- X %>% mutate( ISIC= str_extract(X$Subject, "\\([^()]+\\)") , 
+  #Old version
+	if (TRUE==FALSE) {
+	Xp <- X %>% mutate( ISIC= str_extract(X$subject, "\\([^()]+\\)") , 
 						ISIC=str_sub(ISIC, 2, -2), 
 						ISIC=str_replace(ISIC, "ISIC rev.3, A-X", "TOTAL"), 
 						indicator= if_else(str_detect(SUBJECT,"YA99"),"EMP_TEMP_SEX_ECO_NB",""), 
 						indicator2= if_else(str_detect(SUBJECT,"YW99"),"EES_TEES_SEX_ECO_NB",""), 
 						indicator=if_else(indicator!="",indicator,indicator2)) %>%
-				select(	-indicator2, -Subject,-SUBJECT) 
+				select(	-indicator2, -subject,-SUBJECT) 
+	}
+	
+	#New version, to account for changes
+	Xp <- X %>% mutate( ISIC= str_extract(X$subject, "\\([:alpha:]\\)") , 
+	                    ISIC=str_sub(ISIC, 2, -2), 
+	                    ISIC= if_else( str_detect(subject,"ISIC rev.3, A-X"),"TOTAL",ISIC), 
+	                    indicator= if_else(str_detect(SUBJECT,"YA99"),"EMP_TEMP_SEX_ECO_NB",""), 
+	                    indicator2= if_else(str_detect(SUBJECT,"YW99"),"EES_TEES_SEX_ECO_NB",""), 
+	                    indicator=if_else(indicator!="",indicator,indicator2)) %>%
+	          filter( !is.na(ISIC)  ) %>%
+	  select(	-indicator2, -subject,-SUBJECT) 
   
 	
   ### STEP 3 Target dataset consistent with ILOSTAT format (changing observations names)
@@ -88,7 +97,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_EMP_SEX_ECO_ISIC3 <- function()  { # Employment
   
   
   ### STEP 6 Exporting
-Xpp$time <- as.character(Xpp$time)
+
 saveRDS(Xpp,file = './input/ANNUAL_EMP_SEX_ECO_ISIC3.rds' )
 
 #ensure only one object    
@@ -101,18 +110,17 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_EMP_SEX_ECO_ISIC4 <- function() { # Employment 
   ### STEP 1 Loading local data obtained from link described above
   
 
-  input_path<- paste0(getwd(),'/input/ANNUAL_EMP_SEX_ECO_ISIC4.csv')
-  
-  X<- read_delim(input_path, delim = ',')
-  colnames(X)[1] <- 'ref_area'
+  X<- read_csv(paste0(getwd(),'/input/ANNUAL_EMP_SEX_ECO_ISIC4.csv'))
   
 
-  X <- X %>% select(	ref_area,	SUBJECT,	Subject,	sex = Sex,	time = Time,	obs_value = Value,	obs_status = `Flag Codes`) %>% filter(as.numeric(time) >2008 )	
+
+  X <- X %>% select(	ref_area,	SUBJECT,	subject,	sex,	time ,	obs_value ,	obs_status ) %>% filter(as.numeric(time) >2008 )	
   
   
   ### STEP 2 Extract and Separate Information of the indicators
-  
-  Xp <- X %>% mutate( ISIC= str_extract(X$Subject, "\\([^()]+\\)") ,
+  #Old version
+  if (TRUE==FALSE){
+  Xp <- X %>% mutate( ISIC= str_extract(X$subject, "\\([^()]+\\)") ,
 					  ISIC=str_replace(ISIC, "\\(C \\)", "\\(C\\)"),  
 					  ISIC=str_replace(ISIC, "\\( R\\)", "\\(R\\)"),  
                       ISIC=str_sub(ISIC, 2, -2), 
@@ -120,9 +128,21 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_EMP_SEX_ECO_ISIC4 <- function() { # Employment 
                       indicator= if_else(str_detect(SUBJECT,"YA99"),"EMP_TEMP_SEX_ECO_NB",""), 
                       indicator2= if_else(str_detect(SUBJECT,"YW99"),"EES_TEES_SEX_ECO_NB",""), 
                       indicator=if_else(indicator!="",indicator,indicator2)) %>%
-        select(	-indicator2, -Subject,-SUBJECT) 
+        select(	-indicator2, -subject,-SUBJECT) 
+  }
+  #New version, to account for changes
   
-  
+  Xp <- X %>% mutate( 
+    subject=str_replace(subject, "\\(C \\)", "\\(C\\)"),  
+    subject=str_replace(subject, "\\( R\\)", "\\(R\\)"),  
+    ISIC= str_extract(subject, "\\([:alpha:]\\)") , 
+                      ISIC=str_sub(ISIC, 2, -2), 
+                      ISIC= if_else( str_detect(subject,"ISIC rev.4, A-U"),"TOTAL",ISIC), 
+                      indicator= if_else(str_detect(SUBJECT,"YA99"),"EMP_TEMP_SEX_ECO_NB",""), 
+                      indicator2= if_else(str_detect(SUBJECT,"YW99"),"EES_TEES_SEX_ECO_NB",""), 
+                      indicator=if_else(indicator!="",indicator,indicator2)) %>%
+    filter( !is.na(ISIC)  ) %>%
+    select(	-indicator2, -subject,-SUBJECT)
   
   
   ### STEP 3 Target dataset consistent with ILOSTAT format () observations names)
@@ -186,7 +206,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_EMP_SEX_ECO_ISIC4 <- function() { # Employment 
 				filter(!obs_value %in% c(NA, ''), !(classif1 %in% c('ECO_AGGREGATE_X', 'ECO_SECTOR_X', 'ECO_ISIC3_X') & obs_value %in% 0))
   
   ### STEP 6 Exporting
-Xpp$time <- as.character(Xpp$time) 
+
 saveRDS(Xpp,file = './input/ANNUAL_EMP_SEX_ECO_ISIC4.rds' )
 
 #ensure only one object  
@@ -195,20 +215,17 @@ saveRDS(Xpp,file = './input/ANNUAL_EMP_SEX_ECO_ISIC4.rds' )
 REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_5YRBANDS <- function(){ # open oecd by 5 yrbands data
   
 
-  n_row_ref <- readr::read_csv("./input/ANNUAL_AGE_5YRBANDS.csv", col_names = FALSE, n_max = 1) %>% ncol
-  X <- readr::read_csv("./input/ANNUAL_AGE_5YRBANDS.csv", col_types = paste0(rep('c', n_row_ref), collapse =''), guess_max = 1)
-  colnames(X)[1] <- 'ref_area' #fix bad UTF8 encoding issue for first character/column
+  X <- readr::read_csv("./input/ANNUAL_AGE_5YRBANDS.csv")
   
-  rm(n_row_ref)
   
   X <- X %>%  
-    select(ref_area,sex = SEX, classif1 = Age, indicator = Series, time = TIME, obs_value =  Value, Flags) %>% 
+    rename(classif1 = age, indicator = series) %>% 
     filter(!ref_area %in% 'FTFR') %>% 
     mutate(obs_value = as.numeric(obs_value))
   
   # test if age classification is complete and total is accurate
   Y <- X %>% 	
-    mutate(obs_value = as.numeric(obs_value)) %>% spread(classif1, obs_value)  %>% mutate(TOT = rowSums(.[6:16], na.rm = TRUE)) 
+    mutate(obs_value = as.numeric(obs_value)) %>% spread(classif1, obs_value)  %>% mutate(TOT = rowSums(.[7:17], na.rm = TRUE)) 
   
   # remove inaccurate data 
   Y <- Y %>% 	
@@ -218,7 +235,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_5YRBANDS <- function(){ # open oecd by 5 yr
   X <- X %>% 	
     left_join(Y, by = c("ref_area", "sex", "indicator", "time")) %>% 
     filter(!delete %in% TRUE) %>% 
-    select(-Flags, - delete)
+    select( - delete)
   rm(Y)
   
   
@@ -250,30 +267,28 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_5YRBANDS <- function(){ # open oecd by 5 yr
 
 REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_10YRBANDS <- function(){ # open oecd by 10 yrbands data
 
-  readr::read_csv("./input/ANNUAL_AGE_10YRBANDS.csv", col_types = 'c_c__c_c__c_______d_c') -> X
-  # test if age classification is complete and total accurante
-  colnames(X)[1] <- 'COUNTRY'
+  X <- readr::read_csv("./input/ANNUAL_AGE_10YRBANDS.csv")
+
+  X <- X %>% filter(!ref_area %in% 'FTFR')-> X
   
-  X %>% filter(!COUNTRY %in% 'FTFR')-> X
-  
-  X %>% mutate(Value = as.numeric(Value)) %>% spread(Age, Value)  %>% mutate(TOT = rowSums(.[6:11], na.rm = TRUE)) -> Y
+  Y <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% spread(age, obs_value)  %>% mutate(TOT = rowSums(.[7:12], na.rm = TRUE))
   
   # remove inaccurate data 
-  Y %>% mutate(test = round(as.numeric(Total),1) == round(as.numeric(TOT),1)) %>% filter(test %in% FALSE, Unknown %in% NA, !COUNTRY %in% c('POL', 'RUS')) %>% distinct(COUNTRY, SEX, Series, TIME) %>% mutate(delete = TRUE) -> Y
-  X %>% left_join(Y, by = c("COUNTRY", "SEX", "Series", "TIME")) %>% filter(!delete %in% TRUE) %>% select(-Flags, - delete)-> X
+  Y %>% mutate(test = round(as.numeric(Total),1) == round(as.numeric(TOT),1)) %>% filter(test %in% FALSE, Unknown %in% NA, !ref_area %in% c('POL', 'RUS')) %>% distinct(ref_area, sex, series, time) %>% mutate(delete = TRUE) -> Y
+  X <- X %>% left_join(Y, by = c("ref_area", "sex", "series", "time")) %>% filter(!delete %in% TRUE) %>% select( - delete)
   rm(Y)
   
   
   # create the Total AGE
-  X %>% filter(!Age %in% c("Total", "Unknown")) %>% group_by(COUNTRY, SEX, Series, TIME) %>% summarise(Age = 'Total', NEW = sum(as.numeric(Value))) %>% ungroup -> Total
+  X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup -> Total
   
   # test
-  # X %>% filter(!Age %in% c("Total", "Unknown")) %>% mutate(Value = as.numeric(Value)) %>% spread(Age, Value)  %>% mutate(TOT = rowSums(.[5:9], na.rm = TRUE)) %>% left_join(Total) %>% fix
+  # X %>% filter(!age %in% c("Total", "Unknown")) %>% mutate(obs_value = as.numeric(obs_value)) %>% spread(age, obs_value)  %>% mutate(TOT = rowSums(.[5:9], na.rm = TRUE)) %>% left_join(Total) %>% fix
   
-  AGE_10 <- X %>% mutate(Value = as.numeric(Value)) %>% filter(!Age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, Value = NEW)) 
+  AGE_10 <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, obs_value = NEW)) 
   
   AGE_10 <- AGE_10  %>% 
-    rename(ref_area = COUNTRY, sex = SEX, indicator = Series, time = TIME, obs_value = Value, classif1 = Age) %>% 
+    rename(indicator = series, classif1 = age) %>% 
     mutate(classif1 = classif1 %>% plyr::mapvalues(	from = 	c("15 to 24", "25 to 34", "35 to 44", "45 to 54", "55 to 64", "65+", "Total"), 
                                                     to = 	c("AGE_10YRBANDS_Y15-24", "AGE_10YRBANDS_Y25-34", "AGE_10YRBANDS_Y35-44", "AGE_10YRBANDS_Y45-54", "AGE_10YRBANDS_Y55-64", "AGE_10YRBANDS_YGE65", "AGE_10YRBANDS_TOTAL")))%>% 
 				filter(!obs_value %in% c(NA, ''))
@@ -291,31 +306,21 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_10YRBANDS <- function(){ # open oecd by 10 
 
 REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_AGGREGATE <- function(){ # open oecd by AGGREGATE and YTHADULT AGE data
 
-  readr::read_csv("./input/ANNUAL_AGE_AGGREGATE.csv", col_types = 'c_c__c_c__c_______d_c') -> X
-  colnames(X)[1] <- 'COUNTRY'
-  
-  X %>% filter(!COUNTRY %in% 'FTFR')-> X
+ X <- readr::read_csv("./input/ANNUAL_AGE_AGGREGATE.csv")
+
+  X <- X %>% filter(!ref_area %in% 'FTFR')
   
   
   # test if age classification is complete and total accurante
-  X %>% mutate(Value = as.numeric(Value)) %>% spread(Age, Value)  %>% mutate(TOT = rowSums(.[6:9], na.rm = TRUE)) -> Y
-  
-  # remove inaccurate data #####no deletion
-  # Y %>% mutate(test = round(as.numeric(Total),1) == round(as.numeric(TOT),1)) %>% filter(test %in% FALSE, Unknown %in% NA) %>% distinct(COUNTRY, SEX, Series, TIME) %>% mutate(delete = TRUE) -> Y
-  # X %>% left_join(Y) %>% filter(!delete %in% TRUE) %>% select(-Flags, - delete)-> X
-  X %>% select(-Flags)-> X
-  # rm(Y)
-  
-  
+  # Y <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% spread(age, obs_value)  %>% mutate(TOT = rowSums(.[7:10], na.rm = TRUE)) 
+
   # create the Total AGE
-  X %>% filter(!Age %in% c("Total", "Unknown")) %>% group_by(COUNTRY, SEX, Series, TIME) %>% summarise(Age = 'Total', NEW = sum(as.numeric(Value))) %>% ungroup -> Total
+   Total <-  X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup 
   
-  # test
-  # X %>% filter(!Age %in% c("Total", "Unknown")) %>% mutate(Value = as.numeric(Value)) %>% spread(Age, Value)  %>% mutate(TOT = rowSums(.[5:9], na.rm = TRUE)) %>% left_join(Total) %>% fix
-  
-  AGE_AGGREGATE <- X %>% mutate(Value = as.numeric(Value)) %>% filter(!Age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, Value = NEW)) 
+
+  AGE_AGGREGATE <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, obs_value = NEW)) 
   AGE_AGGREGATE <- AGE_AGGREGATE  %>% 
-    rename(ref_area = COUNTRY, sex = SEX, indicator = Series, time = TIME, obs_value = Value, classif1 = Age) %>% 
+    rename( indicator = series, classif1 = age) %>% 
     mutate(classif1 = classif1 %>% plyr::mapvalues(	from = 	c("15 to 24", "25 to 54", "55 to 64", "65+", "Total"), 
                                                     to = 	c("AGE_AGGREGATE_Y15-24", "AGE_AGGREGATE_Y25-54", "AGE_AGGREGATE_Y55-64", "AGE_AGGREGATE_YGE65", "AGE_AGGREGATE_TOTAL")))
   
@@ -343,15 +348,11 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_AGGREGATE <- function(){ # open oecd by AGG
 
 REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE <- function(){ # back AGE with result combine and add notes create emp_rt, eap_rt, une_rt
  
-  rm (list=ls())
-  
+ 
   X <- bind_rows( readRDS('./input/ANNUAL_AGE_5YRBANDS.rds'), 
                   readRDS('./input/ANNUAL_AGE_10YRBANDS.rds'),  
                   readRDS('./input/ANNUAL_AGE_AGGREGATE.rds')) %>% 
-    mutate(	sex = 	sex %>% recode(	"MW" = "SEX_T", 
-                                   "MEN" = "SEX_M", 
-                                   "WOMEN" = "SEX_F"), 
-            indicator = indicator %>% plyr::mapvalues(	from = 	c("Employment", "Labour Force", "Population", "Unemployment"), 
+    mutate(	     indicator = indicator %>% plyr::mapvalues(	from = 	c("Employment", "Labour Force", "Population", "Unemployment"), 
                                                        to = c("EMP_TEMP_SEX_AGE_NB", "EAP_TEAP_SEX_AGE_NB", "POP_XWAP_SEX_AGE_NB", "UNE_TUNE_SEX_AGE_NB")	)) 
 
   
@@ -408,8 +409,8 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE <- function(){ # back AGE with result combi
   )
   
   
-  Y <- Y %>% distinct(ref_area, indicator, .keep_all = TRUE) %>% mutate(time = as.character(time))	
-  LAST_NOTE <- Y %>% arrange(time) %>% group_by(ref_area, indicator) %>% summarise(time = first(time), note_source = first(note_source)) %>% ungroup
+  Y <- Y %>% distinct(ref_area, indicator, .keep_all = TRUE) 
+  LAST_NOTE <- Y %>% arrange(time) %>% group_by(ref_area, indicator) %>% summarise(time = first(time), note_source = first(note_source)) %>% ungroup 
   
   X <- left_join(X, Y, by = c("ref_area", "indicator", "time")) %>% mutate(note_source = ifelse(note_source %in% NA, 'R1:2382_T2:84_T3:89', note_source), 
                                                                           note_source = ifelse(ref_area %in% 'RUS','R1:2382_T2:84_T3:102',note_source ), 
@@ -477,33 +478,20 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_ANNUAL_AGE_DUR <- function(){ # processing of "
  
   X <- readr::read_csv("./input/ANNUAL_UNE_AGE_DUR.csv") 
   
-  colnames(X)[1] <- 'COUNTRY'
-  X <- X %>% select(COUNTRY, SEX, Age, Duration,  TIME,  Value)
+  X <- X %>% select(ref_area, sex, classif1 = age, classif2  = duration,  time,  obs_value)
   
   
-  X %>% filter(!COUNTRY %in% c('FTFR'))-> X
+  X %>% filter(!ref_area %in% c('FTFR'))-> X
   
-  ########### no erro found 
-  # test if age classification is complete and total accurante
-  # X %>% mutate(Value = as.numeric(Value)) %>% spread(Duration, Value)  %>% mutate(TOT = rowSums(.[c(6:10,13)], na.rm = TRUE)) -> Y
-  
-  # # remove inaccurate data 
-  # Y %>% mutate(test = round(as.numeric(Total),1) == round(as.numeric(TOT),1)) %>% filter(test %in% FALSE, Unknown %in% NA, !COUNTRY %in% c('GBR', 'RUS')) %>% distinct(COUNTRY, SEX, Series, TIME) %>% mutate(delete = TRUE) -> Y
-  # X %>% left_join(Y) %>% filter(!delete %in% TRUE) %>% select(-Flags, - delete)-> X
-  # rm(Y)
+
   
   
   
   
-  
-  
-  X <- X  %>% 		filter(!Duration %in% 'Total Declared') %>%
-    rename(ref_area = COUNTRY, sex = SEX, time = TIME, obs_value = Value, classif1 = Age, classif2 = Duration) %>% 
-    mutate(	indicator = 'UNE_TUNE_SEX_AGE_NB',
+  X <- X  %>% 		filter(!classif2 %in% 'Total Declared') %>%
+        mutate(	indicator = 'UNE_TUNE_SEX_AGE_NB',
             classif1 = classif1 %>% plyr::mapvalues(	from = 	c("15 to 24", "25 to 54", "55+", "Total"), 
-                                                     to = 	c("AGE_AGGREGATE_Y15-24", "AGE_AGGREGATE_Y25-54", "AGE_AGGREGATE_Y55-64", "AGE_AGGREGATE_TOTAL")), 
-            sex = 	sex %>% plyr::mapvalues(	from = 	c("MW", "MEN", "WOMEN"), 
-                                            to = c("SEX_T", "SEX_M", "SEX_F")	))
+                                                     to = 	c("AGE_AGGREGATE_Y15-24", "AGE_AGGREGATE_Y25-54", "AGE_AGGREGATE_Y55-64", "AGE_AGGREGATE_TOTAL")))
   
   
   DUR_AGGREGATE <- X %>% mutate(classif2 = classif2 %>% plyr::mapvalues(
@@ -540,7 +528,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_ANNUAL_AGE_DUR <- function(){ # processing of "
            note_classif = gsub('NA_', '', note_classif, fixed = TRUE))
   
   
-  ANNUAL_UNE_AGE_DUR <- bind_rows(DUR_AGE_YTHADULT, DUR_AGE_AGGREGATE) %>% mutate(time = as.character(time))
+  ANNUAL_UNE_AGE_DUR <- bind_rows(DUR_AGE_YTHADULT, DUR_AGE_AGGREGATE) 
   
   ############ add note and source 
   
@@ -560,42 +548,22 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_ANNUAL_AGE_DUR <- function(){ # processing of "
 
 REP_OECD.LFS_ANNUAL_input_ANNUAL_ANNUAL_EMP_STE <- function(){	# processing of EMP_TEMP_SEX_STE_NB
   
-  readr::read_csv("./input/ANNUAL_EMP_STE.csv", col_types = 'c__c_c__c_______d_c') -> X
-  colnames(X)[1] <- 'ref_area'
+  X <- readr::read_csv("./input/ANNUAL_EMP_STE.csv")
+
   
   
-  
-  X <- X %>% 	rename( sex = Sex, classif1 = Subject, time = TIME, obs_value = Value, obs_status = Flags) %>% 
+  X <- X %>% 	rename( classif1 = subject) %>% 
     mutate(
       classif1 = classif1 %>% 
         plyr::mapvalues(	from = c("Civil Employment all status, all activities", "Employees in all activities", "Employers and persons working on own account all activities",  "Unpaid family workers all activities"), 
-                         to = c('STE_ICSE93_TOTAL','STE_ICSE93_1','STE_ICSE93_3','STE_ICSE93_5')),
-      sex = sex %>% 
-        plyr::mapvalues(	from = c("Males", 'Females', 'All persons'), 
-                         to = c('SEX_M','SEX_F','SEX_T'))
+                         to = c('STE_ICSE93_TOTAL','STE_ICSE93_1','STE_ICSE93_3','STE_ICSE93_5')))
       
-      
-    )
-  
-  
-  
-  
-  
-  # test if classification is complete and total accurate
-  # X %>% select(-obs_status) %>% spread(classif1, obs_value)  %>% mutate(TOT = rowSums(.[4:6], na.rm = TRUE)) %>% filter(!TOT == 0, as.numeric(time) > 1959) %>% mutate(STE_ICSE93_6 = STE_ICSE93_TOTAL - TOT) -> Y
-  
-  
-  
-  
-  #Y %>% mutate(test = (round(as.numeric(STE_ICSE93_TOTAL),0) - round(as.numeric(TOT),0) ) > 1) %>% as.tbl -> Y
   
   # remove inaccurate data 
-  #Y %>% left_join(TEST) %>% filter(!obs_value %in% NA)  %>% mutate(test2 = abs((round(as.numeric(STE_ICSE93_TOTAL),0) - round(as.numeric(obs_value),0)) ) > 3) %>% filter(test2 %in% TRUE) %>% distinct(ref_area, sex, time) %>% mutate(delete = TRUE) -> Y
-  #X %>% left_join(Y) %>% filter(!delete %in% TRUE) %>% select( -delete)-> X
   X <- X %>% mutate(obs_value = as.numeric(as.character(obs_value))) %>% filter(!classif1 %in% c(0, '0'))
   
   
-  ######### delete obvious error the reclaculate them
+  ######### delete obvious error the recalculate them
   
   X <- X %>%   filter(
     !(ref_area %in% 'TUR' & time %in% c('1960','1961', '1965')),
@@ -800,7 +768,7 @@ REP_OECD.LFS_ANNUAL_mapping_source <- function (DataWithoutSource) {  # Utility 
   DataWithSource <- X %>% select(ref_area, source, sex:note_source) %>% mutate(classif2 = NA) %>% ilo:::switch_ilo(version)
   DataWithSource}
   
-REP_OECD_LFS_ANNUAL_download <- function(REF){
+REP_OECD_LFS_ANNUAL_download_old <- function(REF){
 
 # REF <- Mapping_File %>% slice(1)
 
@@ -845,6 +813,64 @@ remDr$closeServer()
 test <- list.files("C:\\temp\\")
 test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.csv']
 file.rename(paste0("C:\\temp\\",test),paste0(INPUT, REF$NAME,'.csv'))
+invisible(gc(reset = TRUE))
+
+
+}
+
+REP_OECD_LFS_ANNUAL_download <- function(REF){
+
+	require(OECD)
+	dstruc <- get_data_structure(REF$dataset)
+	startdate <- 1920
+	enddate <- str_sub(Sys.time(),1,4 ) %>% as.numeric
+
+	X <- NULL
+	for (j in startdate:enddate){
+		y <- NULL
+		test <- try(y <- get_dataset(	dataset = REF$dataset, filter = REF$query, start_time = j, end_time = j, pre_formatted = TRUE), silent =TRUE)
+		if(!class(test)[1] %in% "try-error") X <- bind_rows(X, y) 
+		rm(y)
+	}
+	colnames(X) <- tolower(colnames(X))
+	
+	test_loc <- paste0(colnames(X), collapse = '') %>% str_detect('location')
+	if(test_loc) X <- X %>% rename(ref_area = location)
+	test_cou <- paste0(colnames(X), collapse = '') %>% str_detect('country')
+	if(test_cou) X <- X %>% rename(ref_area = country)
+		
+	X <- X %>% rename(time = obstime, obs_value = obsvalue) %>% 
+				mutate(	sex = sex %>% 
+				plyr::mapvalues(	from = c("MA", 'FE', 'TT', "MW", "MEN", "WOMEN"), 
+                         to = c('SEX_M','SEX_F','SEX_T','SEX_T','SEX_M','SEX_F'), warn_missing = FALSE), 
+				time = as.numeric(time))
+	
+	test_sub <- paste0(colnames(X), collapse = '') %>% str_detect('subject')
+	if(test_sub) {	
+			X <- X %>% rename(SUBJECT = subject) %>% 
+		left_join(dstruc$SUBJECT %>% rename(SUBJECT = id, subject = label), by = 'SUBJECT') %>%  
+		mutate(subject = str_trim(subject))
+	}	
+	test_ser <- paste0(colnames(X), collapse = '') %>% str_detect('series')
+	if(test_ser) {	
+			X <- X %>% rename(test = series) %>% 
+		left_join(dstruc$SERIES %>% rename(test = id, series = label), by = 'test') %>% select(-test) %>% 
+		mutate(series = str_trim(series))
+	}	
+	test_age <- paste0(colnames(X), collapse = '') %>% str_detect('age')
+	if(test_age) {	
+			X <- X %>% rename(test = age) %>% mutate(test = as.character(test) ) %>% 
+		left_join(dstruc$AGE %>% rename(test = id, age = label), by = 'test') %>% select(-test) %>% 
+		mutate(age = str_trim(age))
+	}
+	test_dur <- paste0(colnames(X), collapse = '') %>% str_detect('duration')
+	if(test_dur) {	
+			X <- X %>% rename(test = duration) %>% mutate(test = as.character(test) ) %>% 
+		left_join(dstruc$DURATION %>% rename(test = id, duration = label), by = 'test') %>% select(-test) %>% 
+		mutate(duration = str_trim(duration))
+	}
+			
+X %>% data.table:::fwrite(paste0(INPUT, REF$NAME,'.csv'), na = "")	
 invisible(gc(reset = TRUE))
 
 

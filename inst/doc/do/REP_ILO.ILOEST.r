@@ -8,8 +8,6 @@
 ##################################################################
 
 
-
-
 ##################################################################											# OK for APRIL 2017
 ## POP and LFPR 5yrbands data from LFEP model !!stay stable during 2 year 
 file_lfep <- 'J:\\TEM\\LF Model July 2017\\Final Datasets\\Master LFEP.dta'
