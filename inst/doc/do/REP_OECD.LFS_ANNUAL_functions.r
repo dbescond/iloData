@@ -240,18 +240,18 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_5YRBANDS <- function(){ # open oecd by 5 yr
   
   
   # create the Total AGE
-  Total <- X %>% 
-    filter(!classif1 %in% c("Total", "Unknown")) %>% 
-    group_by(ref_area, sex, indicator, time) %>% 
-    summarise(classif1 = 'Total', NEW = sum(as.numeric(obs_value))) %>% 
-    ungroup
+  #Total <- X %>% 
+  #  filter(!classif1 %in% c("Total", "Unknown")) %>% 
+  #  group_by(ref_area, sex, indicator, time) %>% 
+  #  summarise(classif1 = 'Total', NEW = sum(as.numeric(obs_value))) %>% 
+  #  ungroup
   
   # test
   # X %>% filter(!classif1 %in% c("Total", "Unknown")) %>% mutate(obs_value = as.numeric(obs_value)) %>% 
   #			spread(classif1, obs_value)  %>% mutate(TOT = rowSums(.[5:15], na.rm = TRUE)) %>% left_join(Total) %>% fix
   
   AGE_5 <- X %>%
-    mutate(obs_value = as.numeric(obs_value)) %>% filter(!classif1 %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, obs_value = NEW)) %>% 
+    mutate(obs_value = as.numeric(obs_value)) %>% filter(!classif1 %in% c( "Unknown")) %>% # bind_rows(rename(Total, obs_value = NEW)) %>% 
     mutate(classif1 = classif1 %>% 
              plyr::mapvalues(	
                from = 	c("15 to 19", "20 to 24", "25 to 29", "30 to 34", "35 to 39", "40 to 44", "45 to 49", "50 to 54", "55 to 59", "60 to 64", "65+", "Total"), 
@@ -261,7 +261,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_5YRBANDS <- function(){ # open oecd by 5 yr
   
 
   saveRDS(AGE_5,file = './input/ANNUAL_AGE_5YRBANDS.rds' )
-	rm(Total, X, AGE_5)	
+	rm( X, AGE_5)	
   invisible(gc(reset = TRUE))											
 }									
 
@@ -280,12 +280,12 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_10YRBANDS <- function(){ # open oecd by 10 
   
   
   # create the Total AGE
-  X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup -> Total
+  # X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup -> Total
   
   # test
   # X %>% filter(!age %in% c("Total", "Unknown")) %>% mutate(obs_value = as.numeric(obs_value)) %>% spread(age, obs_value)  %>% mutate(TOT = rowSums(.[5:9], na.rm = TRUE)) %>% left_join(Total) %>% fix
   
-  AGE_10 <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, obs_value = NEW)) 
+  AGE_10 <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c( "Unknown")) # %>% bind_rows(rename(Total, obs_value = NEW)) 
   
   AGE_10 <- AGE_10  %>% 
     rename(indicator = series, classif1 = age) %>% 
@@ -299,7 +299,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_10YRBANDS <- function(){ # open oecd by 10 
   #	X <- readRDS('./input/ANNUAL_AGE_10YRBANDS.rds')
   
   
-  rm(Total, X, AGE_10)
+  rm( X, AGE_10)
   invisible(gc(reset = TRUE))
   
 }
@@ -315,10 +315,10 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_AGGREGATE <- function(){ # open oecd by AGG
   # Y <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% spread(age, obs_value)  %>% mutate(TOT = rowSums(.[7:10], na.rm = TRUE)) 
 
   # create the Total AGE
-   Total <-  X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup 
+  # Total <-  X %>% filter(!age %in% c("Total", "Unknown")) %>% group_by(ref_area, sex, series, time) %>% summarise(age = 'Total', NEW = sum(as.numeric(obs_value))) %>% ungroup 
   
 
-  AGE_AGGREGATE <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c("Total", "Unknown")) %>% bind_rows(rename(Total, obs_value = NEW)) 
+  AGE_AGGREGATE <- X %>% mutate(obs_value = as.numeric(obs_value)) %>% filter(!age %in% c( "Unknown")) # %>% bind_rows(rename(Total, obs_value = NEW)) 
   AGE_AGGREGATE <- AGE_AGGREGATE  %>% 
     rename( indicator = series, classif1 = age) %>% 
     mutate(classif1 = classif1 %>% plyr::mapvalues(	from = 	c("15 to 24", "25 to 54", "55 to 64", "65+", "Total"), 
@@ -340,7 +340,7 @@ REP_OECD.LFS_ANNUAL_input_ANNUAL_AGE_AGGREGATE <- function(){ # open oecd by AGG
   #	X <- readRDS('./input/ANNUAL_AGE_AGGREGATE.rds')
   
   
-  rm(Total, X, AGE_YTHADULT, AGE_AGGREGATE)
+  rm( X, AGE_YTHADULT, AGE_AGGREGATE)
   invisible(gc(reset = TRUE))
 
   

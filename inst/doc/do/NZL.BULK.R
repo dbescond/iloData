@@ -29,7 +29,7 @@ key 		<- c("COLLECTION_CODE","COUNTRY_CODE", "SOURCE_CODE", "INDICATOR_CODE","SE
 
 {
 
-URL <- 'http://archive.stats.govt.nz/tools_and_services/releases_csv_files/csv-files-for-infoshare.aspx'
+URL <- 'https://www.stats.govt.nz/large-datasets/csv-files-for-download'
 
 require(RSelenium) ######## 1.7.1 only
 	pJS <- phantom()
@@ -48,7 +48,13 @@ require(RSelenium) ######## 1.7.1 only
 	remDr$getTitle()[[1]]
 	
 
-	mypath <- remDr$findElement('class name', 'content')$findChildElement('partial link text', 'Labour Market Statistics')$getElementAttribute('href') %>% unlist
+	mypath <- remDr$findElements(using = 'css selector', value = "article")
+	for (i in 1:length(mypath)){
+	mypath[[i]]$findChildElement('partial link text', ' zipped csv tables')$getElementAttribute('href') %>% unlist
+	
+	}
+	
+	$getElementAttribute('href') $findChildElement('partial link text', 'Labour Market Statistics')$getElementAttribute('href') %>% unlist
 	download.file(mypath, paste0('./input/', paste0(Mapping_File$ZIP_NAME[1]), '.zip'), mode = 'wb')
 
 
@@ -69,7 +75,7 @@ rm(URL)
 setwd(INPUT)
 
 
-unzip(paste0(INPUT,unique(Mapping_File$ZIP_NAME),'.zip'))
+#unzip(paste0(INPUT,unique(Mapping_File$ZIP_NAME),'.zip'))
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
 # STEP 1 CLEAN UP AND REDUCE ORIGINAL FILE
 

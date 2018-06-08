@@ -32,7 +32,7 @@ ref <- REF_AGG %>%
 						value = sum(value, na.rm = TRUE)) %>% 		# sum
 			ungroup %>% bind_rows(AGG) 								# ungroup
 	
-		
+		print(i)
 		
 rm(ref)
 }	
@@ -539,8 +539,8 @@ POP_2POP_SEX_AGE_GEO_NB <- bind_rows(POP_2POP_SEX_AGE_GEO_NB, POP_2POP_SEX_AGE_G
 rm(POP_2POP_SEX_AGE_GEO_NB_10, POP_2POP_SEX_AGE_GEO_NB_agg, POP_2POP_SEX_AGE_GEO_NB_ythadu)
 		
 
-POP_2POP_SEX_AGE_GEO_NB <- POP_2POP_SEX_AGE_GEO_NB %>% bind_rows(add_aggregate(POP_2POP_SEX_AGE_GEO_NB))  %>%  
-		arrange(country, time, sex, classif1, classif2)	 # resort
+### POP_2POP_SEX_AGE_GEO_NB <- POP_2POP_SEX_AGE_GEO_NB %>% bind_rows(add_aggregate(POP_2POP_SEX_AGE_GEO_NB))  %>%  
+### 		arrange(country, time, sex, classif1, classif2)	 # resort
 
 
 DT_POP_SEX_AGE_GEO <- POP_2POP_SEX_AGE_GEO_NB %>% 
@@ -553,17 +553,24 @@ DT_POP_SEX_AGE_GEO <- POP_2POP_SEX_AGE_GEO_NB %>%
 		
 load(paste0(ilo:::path$data,'REP_ILO/ILOEST/input/temp/POP.Rdata'))
 		
-POP_2POP_SEX_AGE_GEO_NB <- POP %>% filter(time %in% unique(DT_POP_SEX_AGE_GEO$time)) %>% select(-indicator) %>% left_join(DT_POP_SEX_AGE_GEO,  by = c("country", "time", "classif1", "sex"))		
+POP_2POP_SEX_AGE_GEO_NB <- POP %>% filter(!str_sub(country, 1,1) %in% 'X') %>% 
+			filter(time %in% unique(DT_POP_SEX_AGE_GEO$time)) %>% select(-indicator) %>% left_join(DT_POP_SEX_AGE_GEO,  by = c("country", "time", "classif1", "sex"))		
 
-rm(POP, DT_POP_SEX_AGE_GEO)
+rm( DT_POP_SEX_AGE_GEO)
 		
 POP_2POP_SEX_AGE_GEO_NB <- POP_2POP_SEX_AGE_GEO_NB %>% 
 					mutate(	GEO_COV_NAT = value, 
 							GEO_COV_URB = value / 100 * GEO_COV_URB_DT, 
 							GEO_COV_RUR = value / 100 * GEO_COV_RUR_DT) %>% 
 					select(-GEO_COV_NAT_DT, -GEO_COV_URB_DT, -GEO_COV_RUR_DT, -value) %>%
-					gather(classif2, value, -indicator, -country, -time, -sex, -classif1, -note_value , -collection , -source, na.rm = TRUE) 
+					gather(classif2, value, -indicator, -country, -time, -sex, -classif1, -note_value , -collection , -source, na.rm = TRUE) %>% 
+					mutate(value = as.numeric(value))
 
+POP_2POP_SEX_AGE_GEO_NB <- POP_2POP_SEX_AGE_GEO_NB %>% bind_rows(
+								add_aggregate(POP_2POP_SEX_AGE_GEO_NB) %>% left_join(distinct(POP, country, source, collection),by = "country" )					
+							)  %>%  	arrange(country, time, sex, classif1, classif2)		
+						
+	rm(POP)				
 					
 					
 if(save_file){								
@@ -611,8 +618,8 @@ POP_2POP_GEO_NB <- bind_rows(
 		mutate(classif2 = NA, sex = NA, indicator = 'POP_2POP_GEO_NB') 
 rm(test)
 		
-POP_2POP_GEO_NB <- POP_2POP_GEO_NB %>% bind_rows(add_aggregate(POP_2POP_GEO_NB))  %>%  
-		arrange(country, time, sex, classif1, classif2)	 # resort
+################POP_2POP_GEO_NB <- POP_2POP_GEO_NB %>% bind_rows(add_aggregate(POP_2POP_GEO_NB))  %>%  
+#		arrange(country, time, sex, classif1, classif2)	 # resort
 
 
 	
@@ -625,7 +632,9 @@ DT_POP_2POP_GEO_NB <- POP_2POP_GEO_NB %>%
 		
 load(paste0(ilo:::path$data,'REP_ILO/ILOEST/input/temp/POP.Rdata'))
 
+
 POP_2POP_GEO_NB <- POP %>% 
+				filter(!str_sub(country, 1,1) %in% 'X') %>% 
 				filter(time %in% unique(DT_POP_2POP_GEO_NB$time), classif1 %in% 'AGE_5YRBANDS_TOTAL', sex %in% 'SEX_T') %>% 
 				select(-indicator, -classif1, -sex, -classif2) %>% 
 				left_join(DT_POP_2POP_GEO_NB,  by = c("country", "time"))		
@@ -637,6 +646,13 @@ POP_2POP_GEO_NB <- POP_2POP_GEO_NB %>%
 					select(-GEO_COV_NAT_DT, -GEO_COV_URB_DT, -GEO_COV_RUR_DT, -value) %>%
 					gather(classif1, value, -indicator, -country, -time, -sex, -classif2 , -note_value, -collection , -source, na.rm = TRUE) 
 
+					
+
+POP_2POP_GEO_NB <- POP_2POP_GEO_NB %>% bind_rows(
+
+add_aggregate(POP_2POP_GEO_NB) %>% left_join(distinct(POP, country, source, collection),by = "country" )					
+
+)  %>%  	arrange(country, time, sex, classif1, classif2)		
 					
 if(save_file){								
 
@@ -1259,8 +1275,7 @@ AGG <-  GDP %>%
 		summarise(	country = test[i], 							# rename country = region
 					GDP_205U_NOC_NB = sum((GDP_205U_NOC_NB * EMP), na.rm = TRUE) / sum(EMP , na.rm = TRUE),
 					GDP_211P_NOC_NB = sum((GDP_211P_NOC_NB * EMP), na.rm = TRUE) / sum(EMP , na.rm = TRUE)
-					
-					) %>% 		# sum
+					) %>% 										# sum
 		ungroup %>% bind_rows(AGG) 								# ungroup
 rm(ref)
 }	
@@ -1563,12 +1578,13 @@ combine_ILOEST <- function(){
 
 				
 	ref <- list.files(dir_file)	%>% as_data_frame %>% 
+			filter(str_detect(value, '.csv')) %>%
 			mutate(	ref  = value, 
 					value =  value %>% str_sub( 3, -5), 
 					value = ifelse(str_sub(value, 1,1) %in% '_', str_sub(value,2,-1), value),
 					value = ifelse(str_sub(value, 1,2) %in% c('a_', 'b_', 'c_', 'd_'), str_sub(value,3,-1), value)
 					) %>% 
-		separate(value, c('cla','rep_var','sex', 'cl1','cl2','nb'), extra = 'drop', sep = '_') %>% 
+		separate(value, c('cla','rep_var','sex', 'cl1','cl2','nb'), extra = 'drop', sep = '_', fill = 'right') %>% 
 		mutate(nb = ifelse(!nb %in% c('NB','DT','RT'), NA, nb)) %>% select(-rep_var) %>% 
 		unite(new, cla, sex, cl1,cl2,nb) %>% 
 		mutate(new = str_replace_all(new, '_NA', ''))
@@ -1601,15 +1617,45 @@ for (i in 1:length(check)){
 			}
 	
 		}
-	
+
 	}
 	
-
 }				
 				
 				
 	
 }
+
+
+
+
+combine_ILOEST_get_specific <- function(test_ref_area = NULL){
+
+				
+	ref <- list.files(paste0(ilo:::path$data,'REP_ILO/ILOEST/output/'))	%>% as_data_frame %>% 
+			filter(str_detect(value, '.csv')) %>% .$value
+	
+X <- NULL				
+for (i in 1:length(ref)){
+
+
+Y <- 	read_csv(paste0(ilo:::path$data,'REP_ILO/ILOEST/output/', ref[i]), col_types = cols(.default = col_character()))
+if(!is.null(test_ref_area)){
+Y <- Y %>% filter(ref_area %in% test_ref_area)
+}	
+
+X <- bind_rows(X, Y)	
+
+rm(Y)
+print(ref[i])
+
+}				
+				
+X				
+	
+}
+
+
 
 ##################################################################
 ######## SDG processing
@@ -2637,6 +2683,46 @@ X <- bind_rows(EMP_2EMP_SEX_ECO_NB %>% rename(obs_value = value, ref_area = coun
 
 
 
+		
+		
+test_check_equal <- function(){
+
+
+
+ref <- list.files(paste0(dir_file, 'test')) %>% as_data_frame() %>% mutate(ref_area = str_sub(value, 1,3))
+
+	check <- NULL
+for (i in 1:nrow(ref)){
+
+
+
+	load(paste0(dir_file, 'test/', ref$value[i]))
+
+	Y <- Y %>% arrange(indicator, sex,classif1, classif2 ) %>% mutate(obs_value = round(obs_value, 1))
+	
+	query <- paste0("X <-get_ilo(collection = 'ILOEST', ref_area = '",ref$ref_area[i],"')")
+	
+	 eval(parse(text = query))
+	
+	X <- X %>% arrange(indicator, sex,classif1, classif2) %>% select_(.dots = colnames(Y)) %>% filter(indicator %in% unique(Y$indicator)) %>% mutate(obs_value = round(obs_value, 1))
+	 
+	 
+
+	aaa <- setdiff(X, Y)
+	if(nrow(aaa)) {
+		check <- bind_rows(check, aaa %>% count(ref_area, indicator, time))
+		print(ref$ref_area[i])
+	}
+	
+	rm(X, Y, aaa)
+	
+	invisible(gc(reset = TRUE))
+	invisible(gc(reset = TRUE))
+	
+}
+
+
+}		
 
 
 

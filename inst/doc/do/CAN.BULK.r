@@ -8,6 +8,7 @@
 init_time <- Sys.time()
 
 require(lubridate)
+require(ilo)
 setwd(paste0(ilo:::path$data, '/CAN/BULK/'))
 
 source(paste0( './do/CAN.BULK_functions.r'))
@@ -17,6 +18,32 @@ Target <- 'CAN'
 
 Mapping_File <- readxl:::read_excel("./ReadME_CAN.xlsx", sheet="File")  %>% filter(!ID %in% NA) %>% filter(IsValidate %in% 'Yes') %>% select(-IsValidate) %>% as.data.frame
 Mapping_Definition <- readxl:::read_excel("ReadME_CAN.xlsx", sheet="Definition")  %>% filter(IsValidate %in% 'Yes') %>% select(-IsValidate)  %>% as.data.frame
+
+
+INPUT <- paste0(ilo:::path$data, '/',Target,'/BULK/input/')
+
+
+
+
+# STEP 0 prepare compare with MICRO
+
+load(paste0(ilo:::path$data, "REP_ILO/MICRO/output/", Target, "/LFS/", Target, "_LFS_ilostat.Rdata"))
+X <- X %>%  switch_ilo(version) %>% 
+			mutate(	indicator = paste0(str_sub(indicator, 1,9),str_sub(indicator, -2,-1)),
+					classif1_version = str_sub(classif1_version,1,3),
+					classif2_version = str_sub(classif2_version,1,3)			) %>% 
+			distinct( source, indicator, sex_version, classif1_version, classif2_version, time) %>% 
+			mutate(micro = 'yes')
+
+X %>% saveRDS(file = paste0(INPUT, Target, "_LFS_ilostat.rds"))
+
+rm(X)
+
+
+
+
+
+# STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
 
 
 Sys.setenv(http_proxy="")
@@ -240,8 +267,19 @@ Y <- Y %>%
 				note_source  ) %>% 
 		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
 				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>% 
-		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
+		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE))) %>% 
+		switch_ilo(version) %>% 
+		mutate(	classif1_version = str_sub(classif1_version,1,3),
+				classif2_version = str_sub(classif2_version,1,3))
  
+
+############## remove if available with MICRO
+
+micro <- readRDS(paste0(INPUT, Target, "_LFS_ilostat.rds")) %>% distinct()
+
+Y <- Y %>% 	left_join(micro , by = c("source", "indicator", "sex_version", "classif1_version", "classif2_version", "time")) %>% 
+			filter(!micro %in% 'yes') %>% 
+			select(-micro, -sex_version, -classif1_version, -classif2_version)
 
 
 for (i in 1:length(REF)){
@@ -259,8 +297,9 @@ write.csv(REF,paste0("./FileToLoad.csv"),row.names = FALSE,na="")
 
 
 
-
 final_time <- Sys.time();{final_time  %>% str_sub(12,19) %>% hms() } - { init_time %>% str_sub(12,19) %>% hms()}
 rm(list=ls(all=TRUE)) 
 invisible(gc(reset = TRUE))
 q(save = "no", status = 0, runLast = FALSE)
+
+

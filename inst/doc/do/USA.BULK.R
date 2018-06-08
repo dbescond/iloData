@@ -12,6 +12,7 @@ require(Ariane,quietly =TRUE)
 require(lubridate, quietly =TRUE)
 require(RSelenium, quietly =TRUE)
 require(readxl,quietly =TRUE)
+require(ilo)
 setwd(paste0(ilo:::path$data, '/',Target,'/BULK/'))
 Sys.setenv(http_proxy="")
 Sys.setenv(ftp_proxy="")
@@ -31,6 +32,22 @@ Mapping_Definition <- read_excel(paste0('./ReadME_',Target,'.xlsx'), sheet="Defi
 key 		<- c("COLLECTION_CODE","COUNTRY_CODE", "SOURCE_CODE", "INDICATOR_CODE","SEX_CODE","CLASSIF1_CODE","CLASSIF2_CODE")
 note 		<- c("NOTES_FREQUENCY_CODE","NOTES_CLASSIF_CODE","NOTES_INDICATOR_CODE","NOTES_SOURCE_CODE","CURRENCY_CODE")
 
+
+
+
+# STEP 0 prepare compare with MICRO
+
+load(paste0(ilo:::path$data, "REP_ILO/MICRO/output/", Target, "/CPS/", Target, "_CPS_ilostat.Rdata"))
+X <- X %>%  switch_ilo(version) %>% 
+			mutate(	indicator = paste0(str_sub(indicator, 1,9),str_sub(indicator, -2,-1)),
+					classif1_version = str_sub(classif1_version,1,3),
+					classif2_version = str_sub(classif2_version,1,3)			) %>% 
+			distinct( source, indicator, sex_version, classif1_version, classif2_version, time) %>% 
+			mutate(micro = 'yes')
+
+X %>% saveRDS(file = paste0(INPUT, Target, "_CPS_ilostat.rds"))
+
+rm(X)
 
 # STEP 1 Download, open, CLEAN UP AND REDUCE ORIGINAL FILE
 
@@ -259,9 +276,20 @@ Y <- Y %>%
 		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
 				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time), 
 				note_source = 'R1:3903') %>% 
-		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
+		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE))) %>% 
+		switch_ilo(version) %>% 
+		filter(!(str_detect(source, 'BA') & str_detect(classif1_version, 'ECO') & as.numeric(str_sub(time, 1,4)) > 1999)) %>% 
+		filter(!(str_detect(indicator, 'LUU_XLU4_RT') & as.numeric(str_sub(time, 1,4)) > 1993)) %>% 
+		mutate(	classif1_version = str_sub(classif1_version,1,3),
+				classif2_version = str_sub(classif2_version,1,3))
  
+############## remove if available with MICRO
 
+micro <- readRDS(paste0(INPUT, Target, "_CPS_ilostat.rds"))
+
+Y <- Y %>% 	left_join(micro, by = c("source", "indicator", "sex_version", "classif1_version", "classif2_version", "time")) %>% 
+			filter(!micro %in% 'yes') %>% 
+			select(-micro, -sex_version, -classif1_version, -classif2_version)
 
 
 # split and save by country
@@ -274,7 +302,7 @@ print(REF[i])
 REF <- cbind(PATH = paste0(getwd(), "/output/",Target,"_",str_replace(REF,':', ''),".Rdata"),ID = NA, Types  ="NSO_ilostat", REF = '')
 write.csv(REF,paste0("./FileToLoad.csv"),row.names = FALSE,na="")
 
-
+rm(Y)
 
 
 ref <- Mapping_File$NAME %>% unique

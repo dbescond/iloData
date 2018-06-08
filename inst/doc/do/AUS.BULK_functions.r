@@ -31,7 +31,7 @@ KEY_ORACLE 	<- c("Lang", "Country_Code", "Country_Label", "Collection_Code", "Co
 
 
 ####################### function download
-download_data_AUS_old <- function(Mapping_File, Drop = FALSE){
+download_data_AUS <- function(Mapping_File, Drop = FALSE){
 
 
 
@@ -39,9 +39,27 @@ download_data_AUS_old <- function(Mapping_File, Drop = FALSE){
 
 shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
 
-fprof <- makeFirefoxProfile(list(browser.download.dir = 'C:\\temp'
-                                ,  browser.download.folderList = 2L
-                                , browser.download.manager.showWhenStarting = FALSE
+fprof <- makeFirefoxProfile(list(browser.download.dir = "C:\\temp"
+                                , browser.download.folderList = 2L
+                                , browser.download.autohideButton = TRUE
+                                , browser.download.animateNotification = TRUE
+								, network.proxy.autoconfig_url = 'http://proxyos.ilo.org:8080'
+								, network.proxy.http = 'proxyos.ilo.org'
+								, network.proxy.http_port = 8080L
+								, network.proxy.ftp = 'proxyos.ilo.org'
+								, network.proxy.ftp_port = 8080L
+								, network.proxy.socks = 'proxyos.ilo.org'
+								, network.proxy.socks_port = 8080L
+								, network.proxy.ssl = 'proxyos.ilo.org'
+								, network.proxy.ssl_port = 8080L                                
+								, network.proxy.type = 4L                                
+								, browser.download.manager.showWhenStarting = FALSE
+                                , browser.helperApps.alwaysAsk.force = FALSE
+								, browser.download.manager.alertOnEXEOpen = FALSE
+								, browser.download.manager.focusWhenStarting = FALSE
+								, browser.download.manager.useWindow = FALSE
+								, browser.download.manager.showWhenStarting = FALSE
+								, browser.download.manager.showAlertOnComplete = FALSE
                                 , browser.helperApps.neverAsk.saveToDisk = "application/x-zip"))
 
 NAME <- Mapping_File$ZIP_NAME %>% unique
@@ -122,7 +140,7 @@ for (j in seq_along(XLS)){
 
 }	
 
-download_data_AUS <- function(Mapping_File, Drop = FALSE){
+download_data_AUS_phantom <- function(Mapping_File, Drop = FALSE){
 
 
 

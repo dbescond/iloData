@@ -37,7 +37,12 @@ for (i in 1:length(Mapping_File$NAME)){
 	print(Mapping_File$NAME[i])
 	load(paste(INPUT,Mapping_File$NAME[i],".Rdata",sep=""))
 
-
+	if(str_detect(Mapping_File$NAME[i], "4-3-1")) {
+		X <- X %>% mutate(Tabulated.variable = ifelse(str_detect(Tabulated.variable, 'Not in labour force'), 'Not in labour force',Tabulated.variable ))
+	}
+	
+	
+	
 
 	# avoid white space in column header			
 	colnames(X) <- gsub(' ', '.', colnames(X), fixed = TRUE)

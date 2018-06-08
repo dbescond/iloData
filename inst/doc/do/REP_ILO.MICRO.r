@@ -8,7 +8,8 @@ require(stringr)
 require(iloMicro)
 
 
-workflow <- Micro_get_workflow() %>% filter(processing_status %in% c('Published'), CC_ilostat %in% 'Yes', !freq_code %in% NA, !source %in% 'EULFS') %>% distinct(ref_area, source)
+  workflow <- Micro_get_workflow() %>% filter(processing_status %in% c('Published'), CC_ilostat %in% 'Yes', !freq_code %in% NA, !source %in% 'EULFS') %>% distinct(ref_area, source)
+# workflow <- Micro_get_workflow() %>% filter(processing_status %in% c('Published'), CC_ilostat %in% 'Yes', !freq_code %in% NA) %>% distinct(ref_area, source)
 
 workflow <- Ariane::splitCountryMicro(workflow, commandArgs(TRUE))
 

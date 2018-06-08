@@ -488,7 +488,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_gr_gpgr2.EAR_GGAP_ECO_RT <- function (check = TRUE)
   
   ## Source Map
   library(readxl)
-  Source.Map <- read_excel("J:/COMMON/STATISTICS/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
+  Source.Map <- read_excel("J:/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
     rbind(c("HRV","DA:562") )
   
   
@@ -806,7 +806,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_dd_14.EAR_HEES_SEX_OCU_NB <- function (check = 
       note_source = if_else( ref_area %in% c("CZE") & time<2006 , paste0(note_source,"_S3:21"), note_source),
       note_source = if_else( ref_area %in% c("SWE") , paste0(note_source,"_S3:20"), note_source),
       note_source = if_else( ref_area %in% c("NOR") , paste0(note_source,"_S3:20_S3:21"), note_source),
-      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"S3:16"), note_source),
+      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"_S3:16"), note_source),
       note_source = if_else( ref_area %in% c("DEU") & time<2006 , paste0(note_source,"_S3:27"), note_source),
       # Other source notes
       #note_source = if_else( ref_area %in% c("ESP") & time>2004 , paste0(note_source,"_S9:3937"), note_source),
@@ -942,7 +942,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_dd_20.EAR_XEES_SEX_ECO_NB <- function (check = 
   ## Source Map
   
   library(readxl)
-  Source.Map <- read_excel("J:/COMMON/STATISTICS/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
+  Source.Map <- read_excel("J:/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
     rbind(c("HRV","DA:562") )
   
   
@@ -1037,7 +1037,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_dd_20.EAR_XEES_SEX_ECO_NB <- function (check = 
       note_source = if_else( ref_area %in% c("CZE") & time<2006 , paste0(note_source,"_S3:21"), note_source),
       note_source = if_else( ref_area %in% c("SWE") , paste0(note_source,"_S3:20"), note_source),
       note_source = if_else( ref_area %in% c("NOR") , paste0(note_source,"_S3:20_S3:21"), note_source),
-      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"S3:16"), note_source),
+      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"_S3:16"), note_source),
       note_source = if_else( ref_area %in% c("DEU") & time<2006 , paste0(note_source,"_S3:27"), note_source),
       # Other source notes
       note_source = if_else( ref_area %in% c("ESP") & time>2004 , paste0(note_source,"_S9:3937"), note_source),
@@ -1175,7 +1175,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_dd_21.EAR_XEES_SEX_OCU_NB <- function (check = 
   ## Source Map
   
   library(readxl)
-  Source.Map <- read_excel("J:/COMMON/STATISTICS/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
+  Source.Map <- read_excel("J:/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
     rbind(c("HRV","DA:562") )
   
   ## end
@@ -1269,7 +1269,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_dd_21.EAR_XEES_SEX_OCU_NB <- function (check = 
       note_source = if_else( ref_area %in% c("CZE") & time<2006 , paste0(note_source,"_S3:21"), note_source),
       note_source = if_else( ref_area %in% c("SWE") , paste0(note_source,"_S3:20"), note_source),
       note_source = if_else( ref_area %in% c("NOR") , paste0(note_source,"_S3:20_S3:21"), note_source),
-      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"S3:16"), note_source),
+      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"_S3:16"), note_source),
       note_source = if_else( ref_area %in% c("DEU") & time<2006 , paste0(note_source,"_S3:27"), note_source),
       # Other source notes
       note_source = if_else( ref_area %in% c("ESP") & time>2004 , paste0(note_source,"_S9:3937"), note_source),
@@ -1344,7 +1344,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_pub1s.EAR_XTLP_SEX_RT <- function (check = TRUE
   
   ## Source Map
   library(readxl)
-  Source.Map <- read_excel("J:/COMMON/STATISTICS/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
+  Source.Map <- read_excel("J:/DPAU/DATA/REP_EUROSTAT/SES_ANNUAL/input/SES_Surveys.xlsx") %>%
     rbind(c("HRV","DA:562") )
   
   
@@ -1404,7 +1404,7 @@ REP_EUROSTAT.SES_ANNUAL.earn_ses_pub1s.EAR_XTLP_SEX_RT <- function (check = TRUE
       note_source = if_else( ref_area %in% c("CZE") & time<2006 , paste0(note_source,"_S3:21"), note_source),
       note_source = if_else( ref_area %in% c("SWE") , paste0(note_source,"_S3:20"), note_source),
       note_source = if_else( ref_area %in% c("NOR") , paste0(note_source,"_S3:20_S3:21"), note_source),
-      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"S3:16"), note_source),
+      note_source = if_else( ref_area %in% c("HUN") , paste0(note_source,"_S3:16"), note_source),
       note_source = if_else( ref_area %in% c("DEU") & time<2006 , paste0(note_source,"_S3:27"), note_source),
       # Other source notes
       note_source = if_else( ref_area %in% c("ESP") & time>2004 , paste0(note_source,"_S9:3937"), note_source),

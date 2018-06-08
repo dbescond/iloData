@@ -50,7 +50,7 @@ for (i in 1:length(cou)){
 
 	ref <- STIMicro %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) %>% count(ref_area, source, indicator, sex_version, classif1_version, classif2_version, time) %>% ungroup %>% mutate(STI = 1)
 
-TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, source, indicator, time, STI)) %>% filter(STI %in% 1) 
+TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, source, indicator, time, STI), by = c("ref_area", "source", "indicator", "time")) %>% filter(STI %in% 1) 
 
 
 if(nrow(TEST) > 0){
@@ -167,75 +167,26 @@ X %>% mutate(time = as.character(time)) %>% save_ilo(format = 'del')
 
 
 
-############################## test kilm data versus STI bulk
+############################## test kilm data versus STI bulk/micro
 {
 
 
-res <- get_ilo(query = "filter(stringr:::str_detect(note_source, 'R1:3901'))", info = 'COL') %>% distinct(ref_area,source, indicator, time)
+res <- get_ilo(note_source = 'R1:3901', info = 'COL') %>% distinct(ref_area,source, indicator, time)
 
 
 ######## WARNINGS ARG I13:3888
-res
+
+para <- list()
+
 para$min <- min(res$time)
 para$max <- max(res$time)
 para$source <-  unique(res$source)
 cou <- unique(res$ref_area)
 
-YIold <- get_ilo(ref_area = cou, query = "filter(  as.numeric(time) >= para$min, stringr:::str_detect(note_source, 'R1:3901'))", add = para,  info  ='COL') 
+YIold <- get_ilo(ref_area = cou, query = "filter( source %in% para$source, as.numeric(time) >= para$min, as.numeric(time) <= para$max)", add = para, note_source = 'R1:3901',  info  ='COL') 
 
 
-STIMicro  <- get_ilo(collection = 'STI', ref_area = cou, query = "filter(source %in% para$source, as.numeric(time) >= para$min)", add = para) %>% 
-				# filter(!str_detect(note_source, 'R1:2382')) %>% 
-				filter(!str_detect(note_source, 'R1:3902')) 
-
-cou <- unique(YIold$ref_area)
-X <- NULL
-for (i in 1:length(cou)){
-
-	TEST <- YIold %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) 
-
-	ref <- STIMicro %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) %>% count(ref_area, indicator, sex_version, classif1_version, classif2_version, time) %>% ungroup %>% mutate(STI = 1)
-
-TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, indicator, time, STI)) %>% filter(STI %in% 1)
-
-
-if(nrow(TEST) > 0){
-# name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
-
- #name <- paste0('J:/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- TEST %>% select(-STI, -contains('_version')) # %>% write_csv(  path = name, na = '')
-
-X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
-}
-rm(TEST,ref)
-	
-	
-}
-
-
-
-
-
-
-
-
-
-}
-
-
-
-
-################################## compare YI to bulk STI
-{
-
-
-YIold <- get_ilo( info  ='COL') 
-
-
-STIMicro  <- get_ilo(collection = 'STI', ref_area = cou, query = "filter(source %in% para$source, as.numeric(time) >= para$min)", add = para) %>% 
-				# filter(!str_detect(note_source, 'R1:2382')) %>% 
-				filter(!str_detect(note_source, 'R1:3902')) 
+STIMicro  <- get_ilo(collection = 'STI', ref_area = cou, note_source = 'R1:3903|R1:3513', query = "filter(source %in% para$source, as.numeric(time) >= para$min, as.numeric(time) <= para$max)", add = para) 
 
 cou <- unique(YIold$ref_area)
 X <- NULL
@@ -245,61 +196,69 @@ for (i in 1:length(cou)){
 
 	ref <- STIMicro %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) %>% count(ref_area, source, indicator, sex_version, classif1_version, classif2_version, time) %>% ungroup %>% mutate(STI = 1)
 
-TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, source, indicator, sex_version, classif1_version, classif2_version, time, STI)) %>% filter(STI %in% 1)
+TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, source, indicator, time, STI), by = c("ref_area", "source", "indicator", "time")) %>% filter(STI %in% 1) 
 
 
 if(nrow(TEST) > 0){
-# name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
+name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
 
- #name <- paste0('J:/DPAU/DATA/REP_ILO_MICRO/input/', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- TEST %>% select(-STI, -contains('_version')) # %>% write_csv(  path = name, na = '')
 
+ #PRINT <- TEST %>% distinct(collection, ref_area, source, indicator, sex_version, classif1_version, classif2_version, time)  
+ #PRINT$obs_value <- format(PRINT$obs_value, scientific = FALSE)
+ 
+  #PRINT %>% data.table::fwrite( file = name)
+
+ name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/KILM_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ if(length(name) > 1) {
+ 
+	name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/KILM_', unique(TEST$ref_area), '_',  '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ 
+ 
+ }
+ 
+ TEST %>% select(-STI, -contains('_version')) %>% filter(!str_detect(indicator , 'IFL_'))%>% data.table::fwrite( file = name)
+
+ 
+ 
+ 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
+
+
 }
 rm(TEST,ref)
 	
 	
 }
 
+X <- X %>% filter(!str_detect(indicator , 'IFL_'))
+
+
+
+
 
 }
 
+X %>% mutate(time = as.character(time)) %>% save_ilo(format = 'del')
 
 
-################################ test oecd version national source
+
+################################## compare YI to bulk STI
 {
 
 require(ilo)
 init_ilo()
 
-
-X <- get_ilo(collection = 'STI', query = "filter(stringr:::str_detect(note_source , 'R1:2382'))")
-
-
-res <- X %>%  distinct(ref_area, source, indicator, time) %>% filter(!str_detect(indicator, '_STE_'))
-
-
-
-
-
-
+YIold <- get_ilo( info  ='COL') %>% filter(!str_detect(note_source, 'R1:3901'))
 
 para <- list()
 
-para$min <- min(res$time)
-para$max <- max(res$time)
-para$source <- unique(res$source)
-para$indicator <- unique(res$indicator)
-para$ref_area <- unique(res$ref_area)
-cou <- unique(res$ref_area)
-
-YIold <- get_ilo( query = "filter(ref_area %in% para$ref_area,   as.numeric(time) >= para$min, source %in% para$source, indicator %in% para$indicator)", add = para,  info  ='COL') 
+para$min <- min(YIold$time)
+para$max <- max(YIold$time)
+para$source <-  unique(YIold$source)
+cou <- unique(YIold$ref_area)
 
 
-STIMicro <- get_ilo(collection = 'STI', ref_area = cou, query = "filter(source %in% para$source, as.numeric(time) >= para$min, indicator %in% para$indicator)", add = para) %>% 
-				filter(str_detect(note_source, 'R1:2382')) # %>% # oecd
-				# filter(!str_detect(note_source, 'R1:3902')) 
+STIMicro  <- get_ilo(collection = 'STI', ref_area = cou, note_source = 'R1:3903|R1:3513', query = "filter(source %in% para$source, as.numeric(time) >= para$min, as.numeric(time) <= para$max)", add = para)
 
 cou <- unique(YIold$ref_area)
 X <- NULL
@@ -307,26 +266,72 @@ for (i in 1:length(cou)){
 
 	TEST <- YIold %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) 
 
-	ref <- STIMicro %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) %>% count(ref_area, indicator, sex_version, classif1_version, classif2_version, time) %>% ungroup %>% mutate(STI = 1)
+	ref <- STIMicro %>% filter(ref_area %in% cou[i]) %>% switch_ilo(version) %>% count(ref_area, source, indicator, sex_version, classif1_version, classif2_version, time) %>% ungroup %>% mutate(STI = 1)
 
-TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, indicator, time, STI)) %>% filter(STI %in% 1)
+TEST <-  TEST %>% left_join(ref %>% distinct(ref_area, source, indicator, time, STI), by = c("ref_area", "source", "indicator", "time")) %>% filter(STI %in% 1) 
 
 
 if(nrow(TEST) > 0){
-# name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- # TEST %>% distinct(collection, ref_area, indicator, sex_version, classif1_version, classif2_version, time)  # %>% write_csv(  path = name, na = '')
+name <- paste0('G:/del_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
 
- name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/OECD_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
- TEST %>% select(-STI, -contains('_version')) %>% write_csv(  path = name, na = '')
 
+ #PRINT <- TEST %>% distinct(collection, ref_area, source, indicator, sex_version, classif1_version, classif2_version, time)  
+ #PRINT$obs_value <- format(PRINT$obs_value, scientific = FALSE)
+ 
+  #PRINT %>% data.table::fwrite( file = name)
+
+ name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/YI_', unique(TEST$ref_area), '_', unique(TEST$source) %>% str_replace(':',''), '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ if(length(name) > 1) {
+ 
+	name <- paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/YI_', unique(TEST$ref_area), '_',  '_backup_',paste0(Sys.time() %>% str_sub(., 1,10) %>% str_replace_all(., '-', '_')), '.csv')
+ 
+ 
+ }
+ 
+ TEST %>% select(-STI, -contains('_version')) %>% filter(!str_detect(indicator , 'IFL_'))%>% data.table::fwrite( file = name)
+
+ 
+ 
+ 
 X <- bind_rows(X, TEST %>% select(-STI, -contains('_version')) )
+
+
 }
 rm(TEST,ref)
 	
 	
 }
 
+X <- X %>% filter(!str_detect(indicator , 'IFL_'))
 
 }
+
+X %>% mutate(time = as.character(time)) %>% save_ilo(format = 'del')
+
+
+
+
+
+
+
+
+############## bind csv result
+
+
+
+files <- list.files('J:/DPAU/DATA/REP_ILO/MICRO/input') %>% as_data_frame %>% filter(str_detect(value, '.csv'))
+
+X <- NULL
+for (i in 1:nrow(files)){
+
+X <- bind_rows(X, read_csv(paste0('J:/DPAU/DATA/REP_ILO/MICRO/input/', files$value[i])))
+
+
+}
+
+
+
+
+
 
 

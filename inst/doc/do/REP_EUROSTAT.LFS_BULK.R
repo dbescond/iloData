@@ -38,6 +38,7 @@ Mapping_Definition <- read_excel(paste0("./ReadME_",Target,".xlsx"), sheet="Mapp
 # STEP 1 CLEAN UP AND REDUCE ORIGINAL FILE
 for(i in 1:length(Mapping_File$NAME)){
 
+
 X <- eurostat::get_eurostat(Mapping_File$NAME[i],   time_format = 'raw', keepFlags  = TRUE, cache  = FALSE)
 invisible(gc(reset = TRUE))
 
@@ -50,7 +51,7 @@ X <- X	%>%	as.tbl %>%
 					values = as.numeric(values))
 
 					
-if(i %in% c(3,4,5, 54, 55))	{X <- X %>% mutate(var_unit = unit)}	
+if(Mapping_File$NAME[i] %in% c('une_rt_m','une_rt_q', 'lfsa_sup_age', 'lfsq_sup_age'))	{X <- X %>% mutate(var_unit = unit)}	
 	X <- X %>% select(-one_of('unit'))		
 print(paste0(Mapping_File$NAME[i], '/ download -> ',nrow(X)))
 
@@ -108,7 +109,6 @@ invisible(gc(reset = TRUE))
 
 # STEP 2 MAP to ILO CODE
 for (i in 1:length(Mapping_File$NAME)){
-
 load(paste0("./input/",Mapping_File$NAME[i],".Rdata"))
 
 REF_MAPPING <- Mapping_Definition[Mapping_Definition$File%in%Mapping_File[i,"ID"],]
@@ -423,6 +423,7 @@ Y_annual_query <-  Y_annual %>%
 			filter(query %in% 1) %>% 
 			distinct(collection, ref_area, source, time, freq_code, query) %>%
 			mutate(	time = as.character(time))
+			
 rm(Y_annual, test)
 invisible(gc(reset = TRUE))
 invisible(gc(reset = TRUE))		
@@ -452,7 +453,7 @@ invisible(gc(reset = TRUE))
 }
 
 
-X <- Y %>% filter(!(str_detect(time , c('Q', '')) & str_detect(source, 'BE')))
+X <- Y %>% filter(!(str_sub(time , 5,5) %in% c('Q', '') & str_detect(source, 'BE')))
 rm(Y)
 
 invisible(gc(reset = TRUE))

@@ -273,14 +273,19 @@ X <- X 	%>% 	unite_('ID', ref_id, remove = TRUE, sep = '@') %>%
 					TIME_PERIOD  =  ifelse(nchar(TIME_PERIOD) %in% 4, paste0('Y', substr(TIME_PERIOD, 1, 4)), TIME_PERIOD)
 			) %>% 	
 			mutate_all(funs(gsub('&amp;','&', ., fixed = TRUE))) %>% 
-			mutate_all(funs(gsub(';','@', ., fixed = TRUE))) 
+			mutate_all(funs(gsub(';','@', ., fixed = TRUE))) %>% 
+			mutate(OBS_VALUE = as.numeric(OBS_VALUE))
 
-if(NAME %in%  'DT_1DA7013'){
+if(NAME %in%  c('DT_1DA7013')){
 
 	X <- X %>% group_by(By_gender , By_education_level,  Item, TIME_PERIOD) %>% 
-			summarise(	OBS_VALUE = first(OBS_VALUE)) %>% ungroup
+			summarise(	OBS_VALUE = max(OBS_VALUE, na.rm = TRUE)) %>% ungroup
 }	
+if(NAME %in%  c( 'DT_1DA7025')){
 
+	X <- X %>% group_by(By_gender , By_education_level, TIME_PERIOD) %>% 
+			summarise(	OBS_VALUE = max(OBS_VALUE, na.rm = TRUE)) %>% ungroup
+}
 if(NAME %in% c('DT_1DA7103', 'DT_1DA7087')){
 
 	X <- X %>% group_by(By_gender , By_education_level, TIME_PERIOD) %>% 

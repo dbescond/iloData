@@ -3101,13 +3101,163 @@ ref_file <- 'ILO_EIP_44.csv'
 }
 
 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NEW 			<- 	function(timeto = 2017){ # EMP, SEX_EC2 isic 2 digits agg sector 
+ref_file <- 'ILO_EMP_97.csv'
+	
+	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
+																	COUNTRY = col_character(),
+																	YEAR = col_integer(),
+																	# QUARTER = col_character(),
+																	SEX = col_character(),
+																	STAPRO = col_character(),
+																	NACE2D = col_character(),
+																	VALUE = col_double(),
+																	FLAG = col_character(),
+																	FLAG_BREAK = col_character()
+																	#COUNTRY_ORDER = col_character()
+																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
+			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
+			rename(	ref_area 	= 	COUNTRY, 
+					time 		=  	YEAR, 
+					classif1 = NACE2D, 
+					sex = SEX, 
+					indicator = STAPRO, 
+					obs_value = VALUE, 
+					obs_status = FLAG
+					) %>% 
+			mutate(	obs_status = obs_status %>% recode(
+											'a' 	 = 'U', 
+											'b' 	 = 'U', 
+											'c' 	 = 'U' 
+										))
+	
+	ref_file_total <- list.files('./input/indicator/') %>% as_data_frame() %>% filter(str_detect(value, 'ILO_EMP_95_NaceRev1|ILO_EMP_96_NaceRev2'), str_detect(value, 'ECO_SECTOR')) %>% .$value
+	
+	TOTAL <- as.list(ref_file_total) %>% 
+						plyr:::ldply(function(x) {read_csv( paste0('./input/indicator/', x), 
+															col_types = cols(
+																ref_area 	= col_character(),						
+																indicator 	= col_character(),
+																sex 		= col_character(),
+																classif1 	= col_character(),	
+																
+																time 		= col_double(),
+																obs_value 	= col_double(),	
+																obs_status 	= col_character()), 
+															progress = FALSE) 
+													
+												 })%>% 
+						as.tbl %>% filter(classif1 %in% 'ECO_SECTOR_TOTAL') %>% 
+						mutate(indicator =  gsub("_SEX_ECO_NB", "_SEX_EC2_NB", indicator)) %>% 
+						select(-classif1)
+		
+	test_version_time <- X %>% mutate(classif2 = NA) %>% switch_ilo(version) %>% distinct(classif1_version, time) %>% mutate(classif1 = paste0(classif1_version, '_TOTAL'))	%>% select(-classif1_version)
+	TOTAL <- TOTAL %>% left_join(test_version_time, by = 'time') 
+	
+	TEST_YEAR <- X %>% distinct(ref_area, time, indicator) %>% mutate(keep = 1)
+	TOTAL <- TOTAL %>% left_join(TEST_YEAR, by = c("ref_area", "time", "indicator")) %>% filter(keep %in% 1) %>% select(-keep)
+	
+	X <- bind_rows(X, TOTAL)
+	
+	data.table:::fwrite(X  , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_ISIC_2digit_",timeto,".csv")), showProgress = FALSE)															
 
 
+	
+	X <- X %>% filter(classif1 %in% c("EC2_ISIC4_A01", "EC2_ISIC4_A03", "EC2_ISIC4_C10", "EC2_ISIC4_C11", "EC2_ISIC4_C13", "EC2_ISIC4_C14", "EC2_ISIC4_C21", "EC2_ISIC4_C31", "EC2_ISIC4_E36", "EC2_ISIC4_F41", "EC2_ISIC4_G46", "EC2_ISIC4_G47", "EC2_ISIC4_H49", "EC2_ISIC4_I55", "EC2_ISIC4_I56", "EC2_ISIC4_J61", "EC2_ISIC4_K64", "EC2_ISIC4_K65", "EC2_ISIC4_N78", "EC2_ISIC4_Q86")) %>% 	
+				mutate(classif1 = classif1 %>% mapvalues(from = c("EC2_ISIC4_A01", "EC2_ISIC4_A03", "EC2_ISIC4_C10", "EC2_ISIC4_C11", "EC2_ISIC4_C13", "EC2_ISIC4_C14", "EC2_ISIC4_C21", "EC2_ISIC4_C31", "EC2_ISIC4_E36", "EC2_ISIC4_F41", "EC2_ISIC4_G46", "EC2_ISIC4_G47", "EC2_ISIC4_H49", "EC2_ISIC4_I55", "EC2_ISIC4_I56", "EC2_ISIC4_J61", "EC2_ISIC4_K64", "EC2_ISIC4_K65", "EC2_ISIC4_N78", "EC2_ISIC4_Q86"), 
+																	to = c("ECO_ISIC4_A_01", "ECO_ISIC4_A_03", "ECO_ISIC4_C_10", "ECO_ISIC4_C_11", "ECO_ISIC4_C_13", "ECO_ISIC4_C_14", "ECO_ISIC4_C_21", "ECO_ISIC4_C_31", "ECO_ISIC4_E_36", "ECO_ISIC4_F_41", "ECO_ISIC4_G_46", "ECO_ISIC4_G_47", "ECO_ISIC4_H_49", "ECO_ISIC4_I_55", "ECO_ISIC4_I_56", "ECO_ISIC4_J_61", "ECO_ISIC4_K_64", "ECO_ISIC4_K_65", "ECO_ISIC4_N_78", "ECO_ISIC4_Q_86"), warn_missing =  FALSE))  %>% 
+				mutate(indicator= gsub("SEX_EC2_NB", "SEX_ECO2_NB", indicator))
 
+		data.table:::fwrite(X  , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_ECO_SELECTED_ISIC_2digit_",timeto,".csv")), showProgress = FALSE)															
 
+	
+	
+	rm(X, TOTAL, ref_file_total)
 
+	print(ref_file)
+	
+	
+}
 
+REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_NEW		 		<- 	function(timeto = 2017){ # EMP, SEX_OC2 isco 2 digits agg sector 
+ref_file <- 'ILO_EMP_102.csv'
+	
+	X 	<- 	read_csv(paste0('./input/', ref_file), col_types = cols_only(
+																	COUNTRY = col_character(),
+																	YEAR = col_integer(),
+																	# QUARTER = col_character(),
+																	SEX = col_character(),
+																	STAPRO = col_character(),
+																	ISCO2D = col_character(),
+																	VALUE = col_double(),
+																	FLAG = col_character(),
+																	FLAG_BREAK = col_character()
+																	#COUNTRY_ORDER = col_character()
+																), progress = FALSE ) %>%
+			filter(YEAR < (timeto) + 1) %>%
+			mutate(FLAG = ifelse(FLAG_BREAK %in% 'b', 'B', FLAG)) %>% select(-FLAG_BREAK) %>%
+			rename(	ref_area 	= 	COUNTRY, 
+					time 		=  	YEAR, 
+					classif1 = ISCO2D, 
+					sex = SEX, 
+					indicator = STAPRO, 
+					obs_value = VALUE, 
+					obs_status = FLAG
+					) %>% 
+			mutate(	obs_status = obs_status %>% recode(
+											'a' 	 = 'U', 
+											'b' 	 = 'U', 
+											'c' 	 = 'U' 
+										))
+	
+		
+	ref_file_total <- list.files('./input/indicator/') %>% as_data_frame() %>% filter(str_detect(value, 'ILO_EMP_100_Isco08|ILO_EMP_100_Isco88'), str_detect(value, 'OCU_SKILL')) %>% .$value
+	
+	TOTAL <- as.list(ref_file_total) %>% 
+						plyr:::ldply(function(x) {read_csv( paste0('./input/indicator/', x), 
+															col_types = cols(
+																ref_area 	= col_character(),						
+																indicator 	= col_character(),
+																sex 		= col_character(),
+																classif1 	= col_character(),	
+																
+																time 		= col_double(),
+																obs_value 	= col_double(),	
+																obs_status 	= col_character()), 
+															progress = FALSE) 
+													
+												 })%>% 
+						as.tbl %>% filter(classif1 %in% 'OCU_SKILL_TOTAL') %>% 
+						mutate(indicator =  gsub("_SEX_OCU_NB", "_SEX_OC2_NB", indicator)) %>% 
+						select(-classif1)
+		
+	test_version_time <- X %>% mutate(classif2 = NA) %>% switch_ilo(version) %>% distinct(classif1_version, time) %>% mutate(classif1 = paste0(classif1_version, '_TOTAL'))	%>% select(-classif1_version)
+	TOTAL <- TOTAL %>% left_join(test_version_time, by = 'time') 
+	
+	TEST_YEAR <- X %>% distinct(ref_area, time, indicator) %>% mutate(keep = 1)
+	TOTAL <- TOTAL %>% left_join(TEST_YEAR, by = c("ref_area", "time", "indicator")) %>% filter(keep %in% 1) %>% select(-keep)
+	
+	X <- bind_rows(X, TOTAL)
+	
 
+	
+	data.table:::fwrite(X   , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_ISCO_2digit_",timeto,".csv")), showProgress = FALSE)															
+
+	X <- X %>% filter(classif1 %in% c("OC2_ISCO08_11", "OC2_ISCO08_12", "OC2_ISCO08_14", "OC2_ISCO08_22", "OC2_ISCO08_23", "OC2_ISCO08_25", "OC2_ISCO08_32", "OC2_ISCO08_33", "OC2_ISCO08_41", "OC2_ISCO08_42", "OC2_ISCO08_51", "OC2_ISCO08_52", "OC2_ISCO08_61", "OC2_ISCO08_63", "OC2_ISCO08_71", "OC2_ISCO08_74", "OC2_ISCO08_81", "OC2_ISCO08_83", "OC2_ISCO08_91", "OC2_ISCO08_92", "OC2_ISCO08_93")) %>% 	
+				mutate(classif1 = classif1 %>% mapvalues(from = c("OC2_ISCO08_11", "OC2_ISCO08_12", "OC2_ISCO08_14", "OC2_ISCO08_22", "OC2_ISCO08_23", "OC2_ISCO08_25", "OC2_ISCO08_32", "OC2_ISCO08_33", "OC2_ISCO08_41", "OC2_ISCO08_42", "OC2_ISCO08_51", "OC2_ISCO08_52", "OC2_ISCO08_61", "OC2_ISCO08_63", "OC2_ISCO08_71", "OC2_ISCO08_74", "OC2_ISCO08_81", "OC2_ISCO08_83", "OC2_ISCO08_91", "OC2_ISCO08_92", "OC2_ISCO08_93"), 
+																	to = c("OCU_ISCO08_1_11", "OCU_ISCO08_1_12", "OCU_ISCO08_1_14", "OCU_ISCO08_2_22", "OCU_ISCO08_2_23", "OCU_ISCO08_2_25", "OCU_ISCO08_3_32", "OCU_ISCO08_3_33", "OCU_ISCO08_4_41", "OCU_ISCO08_4_42", "OCU_ISCO08_5_51", "OCU_ISCO08_5_52", "OCU_ISCO08_6_61", "OCU_ISCO08_6_63", "OCU_ISCO08_7_71", "OCU_ISCO08_7_74", "OCU_ISCO08_8_81", "OCU_ISCO08_8_83", "OCU_ISCO08_9_91", "OCU_ISCO08_9_92", "OCU_ISCO08_9_93"), warn_missing =  FALSE)) %>% 
+				mutate(indicator= gsub("SEX_OC2_NB", "SEX_OCU2_NB", indicator))
+
+		data.table:::fwrite(X  , file = paste0('./input/indicator/', paste0(str_replace(ref_file, '.csv', ''), "_OCU_SELECTED_ISCO_2digit_",timeto,".csv")), showProgress = FALSE)															
+
+	
+	rm(X, ref_file_total, TOTAL)
+
+	print(ref_file)
+	
+	
+}
 
 
 

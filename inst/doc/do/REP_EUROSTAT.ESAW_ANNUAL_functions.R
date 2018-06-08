@@ -17,9 +17,10 @@ setwd(paste0(ilo:::path$data, work_directory))
 
 
 
-#Reference group does not always match
+#### Help for reference workers ****************************************************************
 
-REP_EUROSTAT.EASW_ANNUAL.lfsa_egan.INJ_WORK_SEX_MIG_NB <- function (check = TRUE) {
+#this one is only useful to produce intermediate input******************************************
+REP_EUROSTAT.EASW_ANNUAL.lfsa_egan.proINJ_WORK_SEX_MIG_NB <- function (check = TRUE) {
   
   ############## Reference group by nationality INJ_WORK_SEX_MIG_NB
   
@@ -66,7 +67,7 @@ REP_EUROSTAT.EASW_ANNUAL.lfsa_egan.INJ_WORK_SEX_MIG_NB <- function (check = TRUE
     filter(!is.na(ref_area)) %>%
     filter(!is.na(MIG_STATUS)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     
     # Filter to keep only total age
     filter( age=="Y_GE15" ) %>%
@@ -78,22 +79,30 @@ REP_EUROSTAT.EASW_ANNUAL.lfsa_egan.INJ_WORK_SEX_MIG_NB <- function (check = TRUE
       classif2 = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
-      indicator = "INJ_WORK_SEX_MIG_NB",
+      indicator = "proINJ_WORK_SEX_MIG_NB",
       obs_value=values*1000,
       classif1 = MIG_STATUS,
       note_source = "R1:2383_R1:3903_S3:5"
       
     ) %>%
-    select(-unit, -age, -citizen, -geo, -flags, -values, -MIG_STATUS)
+    select(-unit, -age, -citizen, -geo, -flags, -values, -MIG_STATUS) %>%
+    mutate( totals = if_else(classif1 == "MIG_STATUS_TOTAL", obs_value, 0 )  ) %>%
+    group_by(time, sex, ref_area) %>% 
+    mutate(TOTS = sum(totals)) %>%
+    ungroup() %>%
+    mutate( Rates= if_else(is.na(obs_value), 0, obs_value/TOTS ) ) %>%
+    select(-totals, -TOTS, -totals, -obs_value) 
   
+  
+  write.csv(Output, file = './input/proINJ_WORK_SEX_MIG_NB.csv', row.names=FALSE, na="")
   
   
 }
 
-
-REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.INJ_WORK_ECO_NB <- function (check = TRUE) {
+#this one is only useful for reference
+REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.proINJ_WORK_ECO_NB <- function (check = TRUE) {
   
   
   rm(list=setdiff(ls(), c("ilo")))
@@ -137,7 +146,7 @@ REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.INJ_WORK_ECO_NB <- function (check = TRUE) {
     filter(!is.na(ref_area)) %>%
     filter(!is.na(ECO_ISIC4)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     
     # Filter to keep only total age
     filter( age=="Y_GE15" ) %>%
@@ -150,7 +159,7 @@ REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.INJ_WORK_ECO_NB <- function (check = TRUE) {
       classif2 = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_WORK_ECO_NB",
       obs_value=values*1000,
@@ -160,9 +169,92 @@ REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.INJ_WORK_ECO_NB <- function (check = TRUE) {
     ) %>%
     select(-unit, -age, -nace_r2, -geo, -flags, -values, -ECO_ISIC4)
   
+  
+  
+  
+}
+
+#### End of help for reference workers ********************************************************
+
+
+
+
+## Reference workers***************************************************************************
+
+REP_EUROSTAT.EASW_ANNUAL.lfsa_egan.INJ_WORK_SEX_MIG_NB <- function (check = TRUE) {
+  
+  ############## Reference group by nationality INJ_WORK_SEX_MIG_NB
+  
+  rm(list=setdiff(ls(), c("ilo")))
+  require(ilo)
+  require(dplyr)
+  
+
+  
+  #Read Input
+  ReferenceWorkersLevels <- readRDS(paste0('./input/Input.REFERENCE_GROUP.RDS'))
+  
+  MigrantMatrix <- read.csv('./input/proINJ_WORK_SEX_MIG_NB.csv', stringsAsFactors = FALSE)
+  
+  
+  Levels <- ReferenceWorkersLevels %>%
+    filter(  str_detect(classif1,"_TOTAL") ) %>%
+    mutate( classif1 = NA_character_ ) %>%
+    rename( level = obs_value ) %>%
+    select(ref_area, time, sex, level)
+  
+  Input <- MigrantMatrix %>%
+    inner_join(Levels, by=c("ref_area", "time", "sex")  )
+  
+  ############## Modifying input, and saving output
+  Output <- Input %>%
+    mutate( obs_value = as.integer(Rates*level),
+            indicator="INJ_WORK_SEX_MIG_NB"
+            ) %>%
+    select(-Rates, -level) %>%
+    filter( !(classif1 == "MIG_STATUS_X" & obs_value==0) ) %>%
+    mutate( obs_value = obs_value/1000) %>%
+    mutate( obs_status = ifelse(obs_status %in% "", NA_character_ , obs_status))
+  
+  
+  write.csv(Output, file = './input/Output.INJ_WORK_SEX_MIG_NB.csv', row.names=FALSE, na="")
+  
+  
+}
+
+REP_EUROSTAT.EASW_ANNUAL.lfsq_egan2.INJ_WORK_ECO_NB <- function (check = TRUE) {
+  
+  
+  rm(list=setdiff(ls(), c("ilo")))
+  require(ilo)
+  require(dplyr)
+  
+
+  #Read Input
+  Input <- readRDS(paste0('./input/Input.REFERENCE_GROUP.RDS'))
+  
+
+  ############## Modifying input, and saving output
+  Output <- Input %>%
+    filter( sex=="SEX_T") %>%
+    mutate( sex=NA_character_ ) %>%
+    mutate( obs_value = obs_value/1000)%>%
+    mutate( obs_status = ifelse(obs_status %in% "", NA_character_ , obs_status))
+    
+  #Comparison <- merge(Output %>% mutate(new=1), LFS,all.x = TRUE, all.y = TRUE,by= c("ref_area","time", "classif1")) %>% filter(time!=2016) %>% save_ilo( format='csv'  )
+  write.csv(Output, file = './input/Output.INJ_WORK_ECO_NB.csv', row.names=FALSE, na="")
+  
 }
 
 
+## End of reference workers********************************************************************
+
+
+
+
+
+
+## Bulk from Eurostat package******************************************************************
 
 REP_EUROSTAT.EASW_ANNUAL.hsw_n2_02.INJ_FATL_ECO_NB <- function (check = TRUE) {
   
@@ -209,7 +301,7 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_02.INJ_FATL_ECO_NB <- function (check = TRUE) {
     filter(!is.na(ref_area)) %>%
     filter(!is.na(ECO_ISIC4)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     filter( unit == "NR") %>%
     
     #Odd Value
@@ -222,12 +314,12 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_02.INJ_FATL_ECO_NB <- function (check = TRUE) {
       classif2 = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_FATL_ECO_NB",
       obs_value=values,
       classif1 = ECO_ISIC4,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select(-unit, -nace_r2, -geo, -flags, -values, -ECO_ISIC4)
@@ -269,7 +361,6 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_02.INJ_FATL_ECO_NB <- function (check = TRUE) {
   write.csv(Output, file = './input/Output.INJ_FATL_ECO_NB.csv', row.names=FALSE, na="")
   
 }
-
 
 REP_EUROSTAT.EASW_ANNUAL.hsw_n2_01.INJ_NFTL_ECO_NB <- function (check = TRUE) {
   
@@ -317,7 +408,7 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_01.INJ_NFTL_ECO_NB <- function (check = TRUE) {
     filter(!is.na(ref_area)) %>%
     filter(!is.na(ECO_ISIC4)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     filter(sex=="T") %>%
     filter( unit == "NR") %>%
     
@@ -328,12 +419,12 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_01.INJ_NFTL_ECO_NB <- function (check = TRUE) {
       classif2 = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_NFTL_ECO_NB",
       obs_value=values,
       classif1 = ECO_ISIC4,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select(-unit, -nace_r2, -geo, -flags, -values, -ECO_ISIC4)
@@ -383,7 +474,6 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_01.INJ_NFTL_ECO_NB <- function (check = TRUE) {
   write.csv(Output, file = './input/Output.INJ_NFTL_ECO_NB.csv', row.names=FALSE, na="")
   
 }
-
 
 REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_NFTL_INJ_ECO_NB <- function (check = TRUE) {
   
@@ -440,7 +530,7 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_NFTL_INJ_ECO_NB <- function (check = TRUE
     filter(!is.na(ref_area)) %>%
     filter(!is.na(ECO_ISIC4)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     filter( !is.na(INJ_INCAPACITY) ) %>%
     filter( INJ_INCAPACITY!="TODROP" ) %>%
     filter( unit == "NR") %>%
@@ -465,12 +555,12 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_NFTL_INJ_ECO_NB <- function (check = TRUE
       
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_NFTL_INJ_ECO_NB",
       
       classif2 = ECO_ISIC4,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select(-unit, -nace_r2, -geo, -flags,  -ECO_ISIC4)
@@ -524,7 +614,8 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_NFTL_INJ_ECO_NB <- function (check = TRUE
   write.csv(Output, file = './input/Output.INJ_NFTL_INJ_ECO_NB.csv', row.names=FALSE, na="")
 }
 
-
+#IMPORTANT! I have adjusted to match the severity reported by Eurostat
+#Minimum threshold
 REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_DAYS_ECO_NB <- function (check = TRUE) {
   
   rm(list=setdiff(ls(), c("ilo")))
@@ -579,7 +670,7 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_DAYS_ECO_NB <- function (check = TRUE) {
     filter(!is.na(ref_area)) %>%
     filter(!is.na(ECO_ISIC4)) %>%
     filter(!is.na(source)) %>%
-    filter(time>2007) %>%
+    filter(time>2008) %>%
     filter( !is.na(proDays) ) %>%
     filter( proDays!="TODROP" ) %>%
     filter( unit == "NR") %>%
@@ -600,13 +691,13 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_DAYS_ECO_NB <- function (check = TRUE) {
       
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_DAYS_ECO_NB",
       
       classif1 = ECO_ISIC4,
       classif2 = NA_character_,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select(-unit, -nace_r2, -geo, -flags,  -ECO_ISIC4)
@@ -659,7 +750,16 @@ REP_EUROSTAT.EASW_ANNUAL.hsw_n2_04.INJ_DAYS_ECO_NB <- function (check = TRUE) {
   
 }
 
-# Only 2014, Wait for Eurostat's reply
+## End Bulk from Eurostat package**************************************************************
+
+
+
+
+
+
+## AD HOC from  Eurostat transmision***********************************************************
+
+
 REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_DAYS_SEX_MIG_NB <- function (check = TRUE) {
   
   
@@ -667,7 +767,7 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_DAYS_SEX_MIG_NB <- function (chec
   require(ilo)
   require(dplyr)
   
-  #Get Input
+  #Get Input --- that is now done by the cleaning function above
   #library(readxl)
   #Input <-  read_excel("./input/DataTransmisionChangeOfFormat.xlsx", sheet = "INJ_DAYS_SEX_MIG_NB")
   #saveRDS(Input, paste0('./input/Input.INJ_DAYS_SEX_MIG_NB.RDS'))
@@ -717,13 +817,13 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_DAYS_SEX_MIG_NB <- function (chec
       obs_status = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_DAYS_SEX_MIG_NB",
       
       classif1 = MIG_STATUS,
       classif2 = NA_character_,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select( -citizen, -ref_arealabel,  -MIG_STATUS, -data, -names)
@@ -769,144 +869,24 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_DAYS_SEX_MIG_NB <- function (chec
     
     merge (ExclusionGeneralNFTL.Map, all=TRUE) %>% 
     filter( is.na(exclusion) ) %>%
-    select(- exclusion)
+    select(- exclusion) %>%
+    filter( !(classif1 == "MIG_STATUS_X" & obs_value==0) )
   
   #Compare with existing data
   #Target <- get_ilo(indicator='INJ_DAYS_SEX_MIG_NB')
   #saveRDS(Target, paste0('./input/Target.INJ_DAYS_SEX_MIG_NB.RDS'))
   
   #Read Target
-  Target <- readRDS(paste0('./input/Target.INJ_DAYS_SEX_MIG_NB.RDS'))
+  #Target <- readRDS(paste0('./input/Target.INJ_DAYS_SEX_MIG_NB.RDS'))
   
-  Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
+  #Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
   
   write.csv(Output, file = './input/Output.INJ_DAYS_SEX_MIG_NB.csv', row.names=FALSE, na="")
   
 }
 
-# Only 2014, Wait for Eurostat's reply
-REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_MIG_NB <- function (check = TRUE) {
-  
-  rm(list=setdiff(ls(), c("ilo")))
-  require(ilo)
-  require(dplyr)
-  
-  #Get Input
-  #library(readxl)
-  #Input <-  read_excel("./input/DataTransmisionChangeOfFormat.xlsx", sheet = "INJ_NFTL_SEX_MIG_NB")
-  #saveRDS(Input, paste0('./input/Input.INJ_NFTL_SEX_MIG_NB.RDS'))
-  
-  #Read Input
-  Input <- readRDS(paste0('./input/Input.INJ_NFTL_SEX_MIG_NB.RDS'))
-  
-  Input[] <- lapply(Input, as.character)
-  
-  
-  ###### Maps
-  #Country.Map <- read.csv('./input/maps/geo.ref_area.Map.csv', stringsAsFactors = FALSE)
-  #Flags.Map <- read.csv('./input/maps/flags.obs_status.Map.csv', stringsAsFactors = FALSE)
-  #Sector.Map <- read.csv('./input/maps/nace_r2.ECO_ISIC4.Map.csv', stringsAsFactors = FALSE)
-  #Severity.Map <- read.csv('./input/maps/severity.DaysLost.Map.csv', stringsAsFactors = FALSE)
-  Migrant.Map <- read.csv('./input/maps/citizen.MIG_STATUS.Map.csv', stringsAsFactors = FALSE)
-  library(readxl)
-  Source.Map  <- read_excel("./input/maps/MapSource.xlsx", sheet = "NonFatalSource")
-  Metadata.Map  <- read_excel("./input/maps/MappingMetadata.xlsx", sheet = "Clean")
-  #Exclusion.Map <- read_excel("./input/maps/Exclusions.xlsx", sheet = "DaysLost")
-  ExclusionGeneralNFTL.Map <- read_excel("./input/maps/Exclusions.xlsx", sheet = "NFTL")
-  ############## Modifying input, and saving output
-  Output <- Input %>%
-    
-    #Reshape
-    gather( names, data, SEX_F_NAT:SEX_M_TOTAL) %>%
-    mutate( sex = str_sub(names,1,5)) %>%
-    mutate( citizen = str_sub(names,7,-1)) %>%
-    
-    ### Mappings (implies data conversion and/or selection)
-    ## Via Map
-    
-    #sources
-    left_join(Source.Map, by="ref_area") %>%
-    left_join(Migrant.Map, by="citizen") %>%
-    
-    ##Via Filter
-    #filters for mapped variables:
-    
-    
-    #Adding Up
-    mutate( Min= as.integer(str_extract(data,"^[:digit:]+") )) %>%
-    mutate( Max= as.integer(str_extract(data,"[:digit:]+$") )) %>%
-    mutate( obs_value= (Min+Max)/2 ) %>%
-    
-    ### Format Issues
-    mutate(
-      
-      obs_status = NA_character_,
-      note_classif = NA_character_,
-      note_indicator = NA_character_,
-      collection = "YI",
-      
-      indicator = "INJ_NFTL_SEX_MIG_NB",
-      
-      classif1 = MIG_STATUS,
-      classif2 = NA_character_,
-      note_source = "R1:2383_R1:3903_S3:5"
-      
-    ) %>%
-    select( -citizen, -ref_arealabel,  -MIG_STATUS, -data, -names, -Min, -Max)
-  
-  ## Adding necessary Metadata
-  
-  Output <- Output %>%
-    
-    ### Mappings (implies data conversion and/or selection)
-    ## Via Map
-    #ref_area
-    left_join(Metadata.Map , by="ref_area" ) %>%
-    
-    mutate( note_source = if_else( is.na(S7), note_source , paste0(note_source,"_",S7)  ) ) %>%
-    mutate( note_source = if_else( is.na(S7_less2014) | time>=2014, note_source , paste0(note_source,"_",S7_less2014)  ) ) %>%
-    mutate( note_source = if_else( is.na(S7_less2013) | time>=2013, note_source , paste0(note_source,"_",S7_less2013)  ) ) %>%
-    
-    mutate( note_source = if_else( is.na(S8), note_source , paste0(note_source,"_",S8)  ) ) %>%
-    mutate( note_source = if_else( is.na(S8_2008) | time!=2008, note_source , paste0(note_source,"_",S8_2008)  ) ) %>%
-    mutate( note_source = if_else( is.na(S8_2009) | time!=2009, note_source , paste0(note_source,"_",S8_2009)  ) ) %>%
-    mutate( note_source = if_else( is.na(S8_2010_2012) | (time<2010|time>2012  ), note_source , paste0(note_source,"_",S8_2010_2012)  ) ) %>%
-    
-    mutate( note_source = paste0(note_source,"_",S9_nonfatal) ) %>%
-    
-    mutate( note_indicator = if_else(is.na(T14_nonfatal), T13 , paste0(T13,"_",T14_nonfatal) ) ) 
-  
-  Output <- Output[  ,1:13]
-  
-  
-  #Exclude Unreliable Countries (since it's the eurostat ad hoc transmision the exclusions are not included)
-  #Exclude Unreliable Countries   ExclusionGeneralNFTL.Map
-  Output <- Output %>% 
-    merge (ExclusionGeneralNFTL.Map, all=TRUE) %>% 
-    filter( is.na(exclusion) ) %>%
-    select(- exclusion)
-  
-  
-  # We need to compute the total across sex
-  Output <- Output %>%
-    spread(sex, obs_value) %>%
-    mutate(SEX_T=SEX_F+SEX_M) %>%
-    gather(sex, obs_value, SEX_F, SEX_M, SEX_T)
-  
-  #Compare with existing data
-  #Target <- get_ilo(indicator='INJ_NFTL_SEX_MIG_NB')
-  #saveRDS(Target, paste0('./input/Target.INJ_NFTL_SEX_MIG_NB.RDS'))
-  
-  #Read Target
-  Target <- readRDS(paste0('./input/Target.INJ_NFTL_SEX_MIG_NB.RDS'))
-  
-  Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
-  
-  write.csv(Output, file = './input/Output.INJ_NFTL_SEX_MIG_NB.csv', row.names=FALSE, na="")
-  
-}
 
-# Only 2014, Wait for Eurostat's reply
+
 REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_FATL_SEX_MIG_NB <- function (check = TRUE) {
   
   
@@ -934,12 +914,12 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_FATL_SEX_MIG_NB <- function (chec
   library(readxl)
   Source.Map  <- read_excel("./input/maps/MapSource.xlsx", sheet = "FatalSource")
   Metadata.Map  <- read_excel("./input/maps/MappingMetadata.xlsx", sheet = "Clean")
-  #Exclusion.Map <- read_excel("./input/maps/Exclusions.xlsx", sheet = "DaysLost")
+  Exclusion.Map <- read_excel("./input/maps/Exclusions.xlsx", sheet = "Fatal")
   ############## Modifying input, and saving output
   Output <- Input %>%
     
     #Reshape
-    gather( names, data, SEX_F_NAT:SEX_T_TOTAL) %>%
+    gather( names, data, SEX_F_NAT:SEX_M_TOTAL) %>%
     mutate( sex = str_sub(names,1,5)) %>%
     mutate( citizen = str_sub(names,7,-1)) %>%
     
@@ -969,13 +949,13 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_FATL_SEX_MIG_NB <- function (chec
       obs_status = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_FATL_SEX_MIG_NB",
       
       classif1 = MIG_STATUS,
       classif2 = NA_character_,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select( -citizen, -ref_arealabel,  -MIG_STATUS, -data, -names, -Min, -Max)
@@ -1000,9 +980,21 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_FATL_SEX_MIG_NB <- function (chec
     
     mutate( note_source = paste0(note_source,"_",S9_fatal) ) %>%
     
-    mutate( note_indicator = if_else(is.na(T14_fatal), T13 , paste0(T13,"_",T14_fatal) ) ) 
+    mutate( note_indicator = if_else(is.na(T14_fatal), T13 , paste0(T13,"_",T14_fatal) ) )
   
   Output <- Output[  ,1:13]
+  
+  Output <- Output %>%
+    spread(sex, obs_value) %>%
+    mutate(SEX_T=SEX_F+SEX_M) %>%
+    gather(sex, obs_value, SEX_F, SEX_M, SEX_T) %>%
+    filter( !(classif1 == "MIG_STATUS_X" & obs_value==0) )
+  
+  Output <- Output %>% 
+    merge (Exclusion.Map, all=TRUE) %>% 
+    filter( is.na(exclusion) ) %>%
+    select(- exclusion) 
+
   
   
   
@@ -1013,21 +1005,21 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_FATL_SEX_MIG_NB <- function (chec
   #saveRDS(Target, paste0('./input/Target.INJ_FATL_SEX_MIG_NB.RDS'))
   
   #Read Target
-  Target <- readRDS(paste0('./input/Target.INJ_FATL_SEX_MIG_NB.RDS'))
+  #Target <- readRDS(paste0('./input/Target.INJ_FATL_SEX_MIG_NB.RDS'))
   
-  Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
+  #Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
   
   write.csv(Output, file = './input/Output.INJ_FATL_SEX_MIG_NB.csv', row.names=FALSE, na="")
   
 }
 
-# Only 2014, Wait for Eurostat's reply
+
 REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_INJ_MIG_NB <- function (check = TRUE) {
   
   rm(list=setdiff(ls(), c("ilo")))
   require(ilo)
   require(dplyr)
-  
+
   #Get Input
   #library(readxl)
   #Input <-  read_excel("./input/DataTransmisionChangeOfFormat.xlsx", sheet = "INJ_NFTL_SEX_INJ_MIG_NB")
@@ -1084,13 +1076,13 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_INJ_MIG_NB <- function (
       obs_status = NA_character_,
       note_classif = NA_character_,
       note_indicator = NA_character_,
-      collection = "YI",
+      collection = "STI",
       
       indicator = "INJ_NFTL_SEX_INJ_MIG_NB",
       
       classif1 = INJ_INCAPACITY,
       classif2 =  MIG_STATUS,
-      note_source = "R1:2383_R1:3903_S3:5"
+      note_source = "R1:2383_R1:3903_R1:4005_S3:5"
       
     ) %>%
     select( -citizen, -ref_arealabel,  -MIG_STATUS, -data, -names, -Min, -Max, -INJ_INCAPACITY)
@@ -1121,7 +1113,7 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_INJ_MIG_NB <- function (
   Output <- Output[  ,1:13]
   
   
-  #Exclude Unreliable Countries (since it's the eurostat ad hoc transmision the exclusions are not included)
+
   
   
   # We need to compute the total across sex
@@ -1134,7 +1126,11 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_INJ_MIG_NB <- function (
   Output <- Output %>%
     spread(classif1, obs_value) %>%
     mutate(INJ_INCAPACITY_TOTAL=INJ_INCAPACITY_PRM+INJ_INCAPACITY_TMP) %>%
-    gather(classif1, obs_value, INJ_INCAPACITY_TOTAL, INJ_INCAPACITY_PRM, INJ_INCAPACITY_TMP)
+    gather(classif1, obs_value, INJ_INCAPACITY_TOTAL, INJ_INCAPACITY_PRM, INJ_INCAPACITY_TMP)%>%
+    filter( !(classif1 == "MIG_STATUS_X" & obs_value==0) )
+  
+  # This data can be used for the totals, even if it does not work (Exclusions below) for the categorisation
+  saveRDS(Output, paste0('./input/Input.INJ_NFTL_SEX_MIG_NB.RDS'))
   
   #Exclude Unreliable Countries
   Output <- Output %>% 
@@ -1152,11 +1148,59 @@ REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_INJ_MIG_NB <- function (
   #saveRDS(Target, paste0('./input/Target.INJ_NFTL_SEX_INJ_MIG_NB.RDS'))
   
   #Read Target
-  Target <- readRDS(paste0('./input/Target.INJ_NFTL_SEX_INJ_MIG_NB.RDS'))
+  #Target <- readRDS(paste0('./input/Target.INJ_NFTL_SEX_INJ_MIG_NB.RDS'))
   
-  Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex","classif2")) %>% filter(new==1)
+  #Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex","classif2")) %>% filter(new==1)
   
   write.csv(Output, file = './input/Output.INJ_NFTL_SEX_INJ_MIG_NB.csv', row.names=FALSE, na="")
 }
 
 
+
+REP_EUROSTAT.EASW_ANNUAL.AdHocTransmission.INJ_NFTL_SEX_MIG_NB <- function (check = TRUE) {
+  
+  rm(list=setdiff(ls(), c("ilo")))
+  require(ilo)
+  require(dplyr)
+  
+  #Get Input
+  #library(readxl)
+  #Input <-  read_excel("./input/DataTransmisionChangeOfFormat.xlsx", sheet = "INJ_NFTL_SEX_MIG_NB")
+  #saveRDS(Input, paste0('./input/Input.INJ_NFTL_SEX_MIG_NB.RDS'))
+  
+  #Read Input
+  Input <- readRDS(paste0('./input/Input.INJ_NFTL_SEX_MIG_NB.RDS'))
+  
+
+
+  
+  ###### Maps
+
+  ExclusionGeneralNFTL.Map <- read_excel("./input/maps/Exclusions.xlsx", sheet = "NFTL")
+  ############## Modifying input, and saving output
+  
+  Output <- Input %>% 
+    filter(classif1 == "INJ_INCAPACITY_TOTAL" ) %>% 
+    mutate( classif1 = classif2) %>% 
+    mutate( classif2 = NA_character_) %>%
+    mutate( indicator = "INJ_NFTL_SEX_MIG_NB") %>%
+    
+    merge (ExclusionGeneralNFTL.Map, all=TRUE) %>% 
+    filter( is.na(exclusion) ) %>%
+    select(- exclusion)%>%
+    filter( !(classif1 == "MIG_STATUS_X" & obs_value==0) )
+  
+  #Compare with existing data
+  #Target <- get_ilo(indicator='INJ_NFTL_SEX_MIG_NB')
+  #saveRDS(Target, paste0('./input/Target.INJ_NFTL_SEX_MIG_NB.RDS'))
+  
+  #Read Target
+  #Target <- readRDS(paste0('./input/Target.INJ_NFTL_SEX_MIG_NB.RDS'))
+  
+  #Comparison <- merge(Output %>% mutate(new=1), Target,all.x = TRUE, all.y = TRUE,by= c("ref_area","time","source", "classif1","sex")) %>% filter(new==1)
+  
+  write.csv(Output, file = './input/Output.INJ_NFTL_SEX_MIG_NB.csv', row.names=FALSE, na="")
+  
+}
+
+## End from AD HOC from  Eurostat transmision***************************************************

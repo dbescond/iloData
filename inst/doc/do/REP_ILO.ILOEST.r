@@ -20,7 +20,8 @@ file_lfep_median <- 'J:\\TEM\\LF Model July 2017\\Dissemination datasets\\Median
 ##################################################################
 ################################################################## PATCH
 # file_get_master <- 'J:\\TEM\\GET Model November 2017\\Final Datasets\\Master Final GET database November 2017.dta'
-file_get_master <- 'J:\\TEM\\GET Model November 2017\\Final Datasets\\Master Final GET database November 2017_PATCH.dta'
+# file_get_master <- 'J:\\TEM\\GET Model November 2017\\Final Datasets\\Master Final GET database November 2017_PATCH2.dta'
+file_get_master <- 'J:\\TEM\\GET Model May 2018\\Final Datasets\\Master Final GET database May 2018_Patch.dta'
 
 #file_get_master_patch <- 'J:\\TEM\\GET Model November 2017\\Final Datasets\\Master Final GET database November 2017 Philippines correction.dta'
 
@@ -109,6 +110,10 @@ POP_2LDR_NOC_RT()				# POP_2LDR_NOC_RT Labour dependency ratio -- ILO modeled es
 combine_ILOEST()
 
 #################### rebuild SDG
+
+
+# test <- c('ARM','BIH','DZA','IRQ','MNE','NIC','PER','PHL','PSE','QAT','SAU','STP','SYR','YEM')
+
 
 
 # SDG_0852_SEX_AGE_RT
