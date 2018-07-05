@@ -8,12 +8,15 @@ if(nrow(cleanTemp) > 0) {for (i in 1:nrow(cleanTemp)){unlink(paste0('C:\\temp\\'
 require(RSelenium)
 setwd(paste0(ilo:::path$data, '/REP_OECD/LFS_QUARTERLY_SEAS/'))
 Sys.setenv(http_proxy="")
+Sys.setenv(https_proxy="")
+Sys.setenv(ftp_proxy="")
+
 #source(paste("./Processing/R_Functions/A_Load_Functions.R", sep=""))
 INPUT <- paste0(getwd(), '/input/')
 
 
  
-Mapping_File <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="File")  %>% filter(!ID%in%NA) %>% as.data.frame
+Mapping_File <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="File")  %>% filter(!ID%in%NA & Is_Validate %in% 'Yes') %>% as.data.frame
 Mapping_Definition <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="Definition")  
 ReadMeSource <- readxl:::read_excel("./ReadME_OECD_BA_SA.xlsx", sheet="MappingSource")  
 
@@ -28,43 +31,98 @@ header_ILO <- c("INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE","NOTES_FRE
 
 ########################### download data 
 
-Sys.setenv(http_proxy="proxyos.ilo.org:8080")
-Sys.setenv(htts_proxy="proxyos.ilo.org:8080")
-Sys.setenv(ftp_proxy="proxyos.ilo.org:8080")
+Sys.setenv(http_proxy="")
+Sys.setenv(htts_proxy="")
+Sys.setenv(ftp_proxy="")
+
 
 
 for(i in 1:length(Mapping_File$NAME)){
-	require(OECD)
-	dstruc <- get_data_structure(Mapping_File$dataset[i])
-	enddate <- str_sub(Sys.time(),1,4 ) %>% as.numeric
 
-	if(Mapping_File$freq[i] %in% 'Q'){
-		startdate <- 1980
-		ref_time <- paste0(rep(startdate:enddate,4) %>% sort,'-', c('Q1','Q2','Q3','Q4')) %>% sort
-		
-		}
-	if(Mapping_File$freq[i] %in% 'M'){	
-		startdate <- 1986
-		ref_time <- paste0(rep(startdate:enddate,12) %>% sort,'-', c('01','02','03','04','05','06','07','08','09','10','11','12')) %>% sort
-		}
+REF <- Mapping_File %>% slice(i)
+
+cleanTemp <- list.files('C:\\temp\\') %>% as_data_frame %>% filter(value %>% str_detect('\\.'))
+if(nrow(cleanTemp) > 0) {for (i in 1:nrow(cleanTemp)){unlink(paste0('C:\\temp\\', cleanTemp$value[i]))} }; rm(cleanTemp)
+
+shell('java -jar  C:/R/library/RSelenium/bin/selenium-server-standalone.jar', wait   = FALSE)
+	Sys.sleep(10)
+
+# startServer(dir = 'C://R//library//RSelenium//bin/', args = NULL, log = FALSE)
+
+fprof <- makeFirefoxProfile(list( browser.download.dir = "C:\\temp"
+                                , browser.download.folderList = 2L
+                                , browser.download.autohideButton = TRUE
+                                , browser.download.animateNotification = TRUE
+								, network.proxy.autoconfig_url = 'http://proxyos.ilo.org:8080'
+								, network.proxy.http = 'proxyos.ilo.org'
+								, network.proxy.http_port = 8080L
+								, network.proxy.ftp = 'proxyos.ilo.org'
+								, network.proxy.ftp_port = 8080L
+								, network.proxy.socks = 'proxyos.ilo.org'
+								, network.proxy.socks_port = 8080L
+								, network.proxy.ssl = 'proxyos.ilo.org'
+								, network.proxy.ssl_port = 8080L                                
+								, network.proxy.type = 4L                                
+								, browser.download.manager.showWhenStarting = FALSE
+                                , browser.helperApps.alwaysAsk.force = FALSE
+								, browser.download.manager.alertOnEXEOpen = FALSE
+								, browser.download.manager.focusWhenStarting = FALSE
+								, browser.download.manager.useWindow = FALSE
+								, browser.download.manager.showWhenStarting = FALSE
+								, browser.download.manager.showAlertOnComplete = FALSE
+                                , browser.helperApps.neverAsk.saveToDisk = "application/text/csv"))
+#RSelenium::startServer()
+remDr <- remoteDriver(extraCapabilities = fprof)
+remDr$open()  
+                               
+
+remDr$navigate(REF$URL) # go to query webpage
+
+	Sys.sleep(10)	
+
+remDr$executeScript("redirectToSurvey('csv');") # open csv download pop up
+
+remDr$switchToFrame('DialogFrame')
+
+
+	Sys.sleep(10)	
+
+remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_rbCustomLayout')$clickElement()
+	Sys.sleep(3)	
+#remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_cbLabel')$clickElement() ########## keep label
+# 	Sys.sleep(3)	
+remDr$findElement('id', 'divExportToCSV2')$findChildElement('id' , '_ctl12_btnExportCSV')$clickElement()
+	Sys.sleep(100)	
 	
-	X <- NULL
-	for (j in ref_time){
-		y <- NULL
-		test <- try(y <- get_dataset(	dataset = Mapping_File$dataset[i], filter = Mapping_File$query[i], start_time = j, end_time = j, pre_formatted = TRUE), silent =TRUE)
-		if(!class(test)[1] %in% "try-error") X <- bind_rows(X, y) 
-		rm(y)
-	}
 	
-colnames(X) <- tolower(colnames(X))
-
-X %>% data.table:::fwrite(paste0(INPUT, Mapping_File$NAME[i],'.csv'), na = "")	
-
-######################## 
-######################## 
 
 
-Base <- X %>% select(ref_area = location, subject,  measure, frequency, time = obstime, obs_value = obsvalue, obs_status =  obs_status)
+try(remDr$close(), silent = TRUE)
+remDr$closeServer()
+
+test <- list.files("C:\\temp\\")
+test <- test[substr(test, nchar(test)-3, nchar(test)) %in% '.csv']
+file.rename(paste0("C:\\temp\\",test),paste0(INPUT, REF$NAME,'.csv'))
+invisible(gc(reset = TRUE))
+
+
+
+}
+
+
+
+
+
+
+
+for(i in 1:length(Mapping_File$NAME)){
+REF <- Mapping_File %>% slice(i) 
+
+
+
+Base <- read_csv(paste0(INPUT, REF$NAME,'.csv')) %>% select(ref_area = LOCATION, subject = SUBJECT,  measure = MEASURE, frequency = FREQUENCY, time = TIME, obs_value = Value, obs_status =  `Flag Codes` ) %>% 
+			mutate(time = gsub('-', 'M', time)) %>% 
+			mutate(time = gsub('MQ', 'Q', time)) 
 
 
 header_NAT <- colnames(Base)[!colnames(Base)%in%c("time","obs_value","obs_status")]
@@ -134,9 +192,6 @@ Y <- MY_MATRIX %>%
 					unite_("ID_PASS", c("ref_area","INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE", 'time'), sep = "/", remove = FALSE) %>% 
 					mutate(obs_value = as.numeric(obs_value)) %>% 
 					separate_('INDICATOR_CODE/SEX_CODE/CLASSIF1_CODE/CLASSIF2_CODE', c("INDICATOR_CODE","SEX_CODE","CLASSIF1_CODE","CLASSIF2_CODE"), sep = "/", remove = TRUE) %>% 
-					mutate( time = gsub('-Q', '_Q0', time, fixed = TRUE), 
-							time = paste0('Y', time), 
-							time = gsub("-","_M",time, fixed = TRUE)) %>%
 					rename(	ID = ID_PASS, 
 							COUNTRY_CODE = ref_area, 
 							TIME_PERIOD = time, 
@@ -222,7 +277,7 @@ Y$ID <- NA
 X <- Y
 rm(Y, MY_MATRIX,REF_MAPPING)
 
-save(X,file = paste(INPUT,Mapping_File$ID[i],".Rdata",sep=""))
+save(X,file = paste(INPUT,Mapping_File$NAME[i],".Rdata",sep=""))
 rm(X)
 
 invisible(gc(reset = TRUE))
@@ -236,9 +291,9 @@ print(Mapping_File$NAME[i])
 # group all OECD SA
 
 
-for (i in 1:length(Mapping_File$ID)){
-print(Mapping_File$ID[i])
-load(paste0(INPUT,Mapping_File$ID[i],".Rdata"))
+for (i in 1:length(Mapping_File$NAME)){
+print(Mapping_File$NAME[i])
+load(paste0(INPUT,Mapping_File$NAME[i],".Rdata"))
 PASS <- X
 if(!empty(PASS)){
 ifelse(i==1,Y <- PASS, Y <- bind_rows(Y,PASS))
@@ -268,8 +323,6 @@ REF <- levels(as.factor(Y$COUNTRY_CODE))
 				note_classif = NOTES_CLASSIF_CODE, 
 				note_indicator = NOTES_INDICATOR_CODE, 
 				note_source = NOTES_SOURCE_CODE ) %>% 
-		mutate(	time = paste0(str_sub(time, 2,5), str_sub(time,7,9)), 
-				time = ifelse(str_sub(time,5,5) %in% 'Q', paste0(str_sub(time, 1,5), str_sub(time, -1,-1)), time)) %>%  
 		mutate_all(funs(mapvalues(.,c('XXX_XXX_XXX', 'NaN', '', ' ', 'NA'), c(NA, NA, NA, NA, NA), warn_missing = FALSE)))
 		
 

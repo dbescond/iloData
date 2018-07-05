@@ -32,7 +32,8 @@ zip_file <- Mapping_File %>% select(ZIP_NAME) %>% distinct %>% t %>% as.characte
 
 for (i in seq_along(zip_file)){
 
-download_data_AUS(Mapping_File %>% filter(ZIP_NAME %in% zip_file[i]), Drop  = FALSE)
+# download_data_AUS_phantom(Mapping_File %>% filter(ZIP_NAME %in% zip_file[i]), Drop  = FALSE)
+# download_data_AUS(Mapping_File %>% filter(ZIP_NAME %in% zip_file[i]), Drop  = FALSE)
 
 	print(i)
 

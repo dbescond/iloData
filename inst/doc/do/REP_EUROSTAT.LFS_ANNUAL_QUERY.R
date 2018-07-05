@@ -80,6 +80,8 @@ REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_42(timeto = 2017)
 REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_43(timeto = 2017)
 REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EIP_44(timeto = 2017)
 
+
+
 REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_97_NEW(timeto = 2017)
 REP_EUROSTAT.LFS_ANNUAL_QUERY_input_ILO_EMP_102_NEW(timeto = 2017)
 
@@ -122,7 +124,12 @@ for (i in 1:length(ref_cou)){
 						select(ref_area, source, indicator, sex, classif1, classif2, time, obs_value, obs_status) %>% 
 						left_join(ref_note, by = 'indicator') %>% 
 						mutate(collection = 'STI') %>% 
-						mutate(obs_value = ifelse(obs_value %in% 0 & obs_status %in% c('U', 'B'), NA, obs_value  )) 
+						mutate(obs_value = ifelse(obs_value %in% 0 & obs_status %in% c('U', 'B'), NA, obs_value  )) %>% 
+						mutate(note_indicator = ifelse(str_detect(indicator, 'ECO2_') & as.numeric(time) < 2008, paste0(note_indicator, '_I13:4160'), note_indicator)) %>%
+						mutate(note_indicator = ifelse(str_detect(indicator, 'OCU2_') & as.numeric(time) < 2011, paste0(note_indicator, '_I13:4160'), note_indicator)) %>% 
+						mutate(note_indicator = gsub('NA_', '', note_indicator, fixed = TRUE))
+		
+		
 		
 		NSW <-  bind_rows(NSW, X %>% filter(indicator %in% 'EES_TEES_SEX_AGE_JOB_NB', classif1 %in% 'AGE_10YRBANDS_TOTAL', classif2 %in% c('JOB_CONTRACT_TEMP','JOB_CONTRACT_TOTAL'))) %>% mutate(collection = 'NSW')
 		

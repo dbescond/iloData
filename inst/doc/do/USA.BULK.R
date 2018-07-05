@@ -55,7 +55,7 @@ rm(X)
 
 for (i in 1:length(Mapping_File$NAME)){
 
-test <- try( download.file(Mapping_File$URL[i], paste0(INPUT,Mapping_File$NAME[i], '.txt' , mode = 'wb'),  quiet = T), silent = T)
+test <- try( download.file(Mapping_File$URL[i], paste0(INPUT,Mapping_File$NAME[i], '.txt') , mode = 'wb',  quiet = T), silent = T)
 
 print(paste0(Mapping_File$NAME[i], '/ download -> ',ifelse(test%in% 0, 'OK', 'ERROR') ))
 
@@ -86,12 +86,16 @@ X <- readr::read_delim(paste0(INPUT,Mapping_File$NAME[i],'.txt'), col_types = re
 				!period %in% 'A01' ) %>% 
 		mutate(	value = as.numeric(value), 
 				TIME_PERIOD = stringr::str_c('Y',year, '_',period )) %>%
-		select(-year, -period) %>% 
+		select(-period) %>% 
 		mutate(	TIME_PERIOD = stringr::str_replace(TIME_PERIOD, '_M13',''),
 				TIME_PERIOD = stringr::str_replace(TIME_PERIOD, '_Q05',''),
 				TIME_PERIOD = stringr::str_replace(TIME_PERIOD, '_S03','')		) %>%
 		filter(series_id %in% c(REF_ID, paste0(REF_ID,'Q')))
-		
+	
+if (Mapping_File$NAME[i] %in% c("ln.data.1.AllData", "le.data.1.AllData")){
+X <- X %>% filter(as.numeric(str_sub(TIME_PERIOD,2,5)) < 2000)
+}
+	
 		
 
 save(X,file = paste0(INPUT,Mapping_File$NAME[i],'.Rdata'))

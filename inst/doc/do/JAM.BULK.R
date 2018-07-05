@@ -75,7 +75,7 @@ X <- X %>% mutate(	sex = ifelse(Time %in% c('2012Q1', '2012Q2','2012Q3','2012Q4'
 }
 			
 			
-			
+try(X <- X %>% mutate(industry = gsub(';', ',', industry, fixed = TRUE)))	
 			
 			
 			

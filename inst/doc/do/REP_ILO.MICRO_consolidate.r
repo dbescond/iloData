@@ -4,14 +4,14 @@ Sys.time()
 
 require(iloMicro)
 
-Micro_process_all(skip = 'EULFS')
+Micro_process_all(skip = 'EULFS', PUB = TRUE)
 
 invisible(gc(reset = TRUE))
 invisible(gc(reset = TRUE))
 # copy for production:
 X <- read_csv(paste0(ilo:::path$micro, '_Admin/CMD/FileToLoad.csv'), col_types = cols_only(
 																				PATH = col_character(),
-																				ID = col_character(),
+																				ID = col_double(),
 																				Types = col_character(),
 																				REF = col_character()
 																))

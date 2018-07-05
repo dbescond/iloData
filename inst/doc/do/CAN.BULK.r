@@ -50,61 +50,122 @@ Sys.setenv(http_proxy="")
 Sys.setenv(https_proxy="")
 Sys.setenv(ftp_proxy="")
 getOption('timeout')
+
+Sys.setenv(http_proxy="proxyos.ilo.org:8080")
+Sys.setenv(htts_proxy="proxyos.ilo.org:8080")
+Sys.setenv(ftp_proxy="proxyos.ilo.org:8080")
+
 options(timeout=4000)
+setwd('./input/')
 
 for (i in 1:length(Mapping_File$NAME)){
 
-# test <- try( httr:::GET(Mapping_File$URL[i], httr:::write_disk(paste0('./input/',basename(Mapping_File$URL[i]) ), overwrite=TRUE)), silent = T)
+try(unlink(paste0(basename(Mapping_File$URL[i])), recursive = TRUE, force = TRUE), silent = TRUE)
 
-test <- try(	download.file(Mapping_File$URL[i], paste0('./input/',basename(Mapping_File$URL[i]))), silent = T)
+download.file(Mapping_File$URL[i], paste0(basename(Mapping_File$URL[i])), quiet = TRUE, mode = 'wb')
 
-print(paste0(Mapping_File$NAME[i], '/ download -> ',test))
-rm(test)
+closeAllConnections()
 
-con <- unz(paste0('./input/',basename(Mapping_File$URL[i])), stringr::str_replace(basename(Mapping_File$URL[i]),'.zip' ,'.csv' ))
+if(file.info(paste0(basename(Mapping_File$URL[i])))$size / 1000 < 50){
+
+try(unlink(paste0(basename(Mapping_File$URL[i])), recursive = TRUE, force = TRUE), silent = TRUE)
+
+download.file(Mapping_File$URL[i], paste0(basename(Mapping_File$URL[i])), quiet = TRUE, mode = 'wb')
+
+closeAllConnections()
+
+}
 
 
-ref <- readr::read_csv(con, col_names = TRUE, n_max = 1)
-ref <- paste0(rep('c', ncol(ref)), collapse = '')
-con <- unz(paste0('./input/',basename(Mapping_File$URL[i])), stringr::str_replace(basename(Mapping_File$URL[i]),'.zip' ,'.csv' ))
-X <- readr::read_csv(con, col_types = ref,  col_names = TRUE)
+# unzip(paste0(basename(Mapping_File$URL[i])), files = paste0(stringr::str_replace(basename(Mapping_File$URL[i]),'-eng.zip' ,'.csv' )))
+
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+}
+
+
+for (i in 1:length(Mapping_File$NAME)){
+
+ref <- Mapping_File$type[i] 
+ref 		<- 	gsub("\n"	," ", ref,fixed = TRUE)	
+ref 		<- 	gsub("\r"	," ", ref,fixed = TRUE)	
+ref 		<- 	gsub("   "	," ", ref,fixed = TRUE)	
+ref 		<- 	gsub("  "	," ", ref,fixed = TRUE)	
+
+
+
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+
+
+con <- unz(paste0(basename(Mapping_File$URL[i])), stringr::str_replace(basename(Mapping_File$URL[i]),'-eng.zip' ,'.csv' ))
+X <- NULL
+test <- try(X <- eval(parse(text = paste0("readr::read_csv(con , col_types =  ", ref, ", n_max = Inf, guess_max = 1, trim_ws = FALSE, progress  = FALSE)"))) %>% rename(Ref_Date = REF_DATE, Value = VALUE), silent = TRUE)
+
+if(!class(test)[1] == 'tbl_df'){
+
+unzip(paste0(basename(Mapping_File$URL[i])),  stringr::str_replace(basename(Mapping_File$URL[i]),'-eng.zip' ,'.csv' ))
+
+X <- eval(parse(text = paste0("readr::read_csv(stringr::str_replace(basename(Mapping_File$URL[i]),'-eng.zip' ,'.csv' ), col_types =  ", ref, ", n_max = Inf, guess_max = 1, trim_ws = FALSE, progress  = FALSE)"))) %>% rename(Ref_Date = REF_DATE, Value = VALUE)
+
+unlink(stringr::str_replace(basename(Mapping_File$URL[i]),'-eng.zip' ,'.csv' ), recursive = TRUE, force = TRUE)
+}
+
+
+
+
 rm(ref)
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+
+colnames(X) <- gsub(' ', '_', colnames(X), fixed = TRUE)
+colnames(X) <- gsub('-', '_', colnames(X), fixed = TRUE)
+colnames(X) <- gsub('_(NAICS)', '', colnames(X), fixed = TRUE)
+
+invisible(gc(reset = TRUE))
+invisible(gc(reset = TRUE))
+
+X <- X %>% filter(GEO %in% 'Canada') # X[X[,Condition[1]]%in%Condition[2],]
 
 
-
-
-
-
-if(Mapping_File$NAME[i]%in%"02820071-eng"){
-X[X$INDUSTRY%in%c("Total employees, all industries","Total employees"),"INDUSTRY"] <- "Total employed, all industries"
+ if(Mapping_File$NAME[i]%in%c("14100063", '14100064')){
+ X <- X %>% mutate(North_American_Industry_Classification_System = gsub("Total employees, all industries","Total employees", North_American_Industry_Classification_System, fixed = TRUE))
 }
 
-if(Mapping_File$NAME[i]%in%"02820048-eng"){
-colnames(X)[colnames(X)%in%"GOGRAPHIE"] <- "GEOGRAPHY"
-}
+# if(Mapping_File$NAME[i]%in%"02820048-eng"){
+# colnames(X)[colnames(X)%in%"GOGRAPHIE"] <- "GEOGRAPHY"
+# }
 
 
-if(Mapping_File$NAME[i]%in%"02820072-eng"){
-X[X$TYPEOFWORK%in%"Total employees","TYPEOFWORK"] <- "Both full- and part-time employees"
-X[X$INDUSTRY%in%c("Total employees, all industries","Total employees"),"INDUSTRY"] <- "Total employed, all industries"
-}
+# if(Mapping_File$NAME[i]%in%"02820072-eng"){
+# X[X$TYPEOFWORK%in%"Total employees","TYPEOFWORK"] <- "Both full- and part-time employees"
+# X[X$INDUSTRY%in%c("Total employees, all industries","Total employees"),"INDUSTRY"] <- "Total employed, all industries"
+# }
 
-if(Mapping_File$NAME[i]%in%c("02820118-eng", '02820218-eng', '02820219-eng',"02820119-eng", '02820138-eng', '02820137-eng')){
-colnames(X)[colnames(X)%in%"GEO"] <- "GEOGRAPHY"
-colnames(X)[colnames(X)%in% c("URBANRURAL", 'POPANDRURAL')] <- "URBANANDRURAL"
-}
+# if(Mapping_File$NAME[i]%in%c("02820118-eng", '02820218-eng', '02820219-eng',"02820119-eng", '02820138-eng', '02820137-eng')){
+# colnames(X)[colnames(X)%in%"GEO"] <- "GEOGRAPHY"
+# colnames(X)[colnames(X)%in% c("URBANRURAL", 'POPANDRURAL')] <- "URBANANDRURAL"
+# }
+
+print(Mapping_File$URL[i])
+print(paste0(colnames(X), collapse = ' / '))
 
 
-X <- X %>% filter(GEOGRAPHY %in% 'Canada') # X[X[,Condition[1]]%in%Condition[2],]
 
-
-save(X,file = paste('./input/',Mapping_File$NAME[i],".Rdata",sep=""))
+save(X,file = paste(Mapping_File$NAME[i],".Rdata",sep=""))
 rm(X)
 #file.remove(paste0('C:/temp/',basename(Mapping_File$URL[i])))
+invisible(gc(reset = TRUE))
 invisible(gc(reset = TRUE))
 
 
 }
+
+
+
+
+
+setwd(paste0(ilo:::path$data, '/CAN/BULK/'))
 
 # STEP 2 MAP to ILO CODE
 
@@ -113,13 +174,10 @@ for (i in 1:length(Mapping_File$NAME)){
 print(Mapping_File$NAME[i])
 load(paste('./input/',Mapping_File$NAME[i],".Rdata",sep=""))
 
-X <- X[!X$Value%in%"x",]
-X[X$SEX%in%"Both sexes","SEX"] <- "T"
-X[X$SEX%in%"Males","SEX"] <- "M"
-X[X$SEX%in%"Females","SEX"] <- "F"
-X[X$SEX%in%"Both sexes (x 1,000)","SEX"] <- "T"
-X[X$SEX%in%"Males (x 1,000)","SEX"] <- "M"
-X[X$SEX%in%"Females (x 1,000)","SEX"] <- "F"
+
+X <- X %>% filter(!Value%in%"x") %>% 
+	mutate(Sex = Sex %>% plyr:::mapvalues(from = c("Both sexes","Males", "Females", "Both sexes (x 1,000)", "Males (x 1,000)", "Females (x 1,000)"), to = c("T","M", "F", "T", "M", "F"),  warn_missing = FALSE)) %>% 
+	filter(!Value %in% NA)
 
 
 X <- as.data.frame(X)
@@ -145,7 +203,7 @@ colnames(MY_NEW)[1:5] <- c('ID_PASS', colnames(REF_MAPPING)[1:4])
 for (k in 7:ncol(REF_MAPPING)){
 MY_NEW$ID_PASS <- paste(MY_NEW$ID_PASS,MY_NEW[,colnames(MY_NEW)%in%colnames(REF_MAPPING)[k]],sep=";")
 }
-MY_MATRIX <- MY_NEW[1,c("ID_PASS","indicator/classif1/classif2","SEX","freq_code","note_classif","note_indicator","Ref_Date","Value")]
+MY_MATRIX <- MY_NEW[1,c("ID_PASS","indicator/classif1/classif2","Sex","freq_code","note_classif","note_indicator","Ref_Date","Value")]
 
 
 j <- 1
@@ -169,17 +227,17 @@ My_REF <- paste(sort(rep(My_REF,length(My_list[[k]]))),My_list[[k]],sep=";")
 }
 
 MY_MATRIX <-rbind(MY_MATRIX,
-			MY_NEW[MY_NEW$ID_PASS%in%My_REF,colnames(MY_NEW)%in%c("ID_PASS","indicator/classif1/classif2","SEX","freq_code","note_classif","note_indicator","Ref_Date","Value")])
+			MY_NEW[MY_NEW$ID_PASS%in%My_REF,colnames(MY_NEW)%in%c("ID_PASS","indicator/classif1/classif2","Sex","freq_code","note_classif","note_indicator","Ref_Date","Value")])
 }
 
 
 MY_MATRIX <- MY_MATRIX[-1,]
 
 invisible(gc(reset = TRUE))
-ifelse(unique(substr(MY_MATRIX$Ref_Date,5,5))%in%"/",MY_MATRIX$Ref_Date <- paste("Y",substr(MY_MATRIX$Ref_Date,1,4),"_M",substr(MY_MATRIX$Ref_Date,6,7),sep=""),MY_MATRIX$Ref_Date <- paste("Y",substr(MY_MATRIX$Ref_Date,1,4),sep=""))
+ifelse(unique(substr(MY_MATRIX$Ref_Date,5,5))%in%"-",MY_MATRIX$Ref_Date <- paste("Y",substr(MY_MATRIX$Ref_Date,1,4),"_M",substr(MY_MATRIX$Ref_Date,6,7),sep=""),MY_MATRIX$Ref_Date <- paste("Y",substr(MY_MATRIX$Ref_Date,1,4),sep=""))
 
 ######################### NEXT STEP
-MY_MATRIX$ID_PASS <- paste(MY_MATRIX[,"indicator/classif1/classif2"],MY_MATRIX$SEX,MY_MATRIX$Ref_Date,sep="/")
+MY_MATRIX$ID_PASS <- paste(MY_MATRIX[,"indicator/classif1/classif2"],MY_MATRIX$Sex,MY_MATRIX$Ref_Date,sep="/")
 
 
 
@@ -208,7 +266,7 @@ My_REF <- as.data.frame(cbind(ID=levels(as.factor(MY_MATRIX$ID_PASS)),
 My_REF <- My_Vlookup(My_REF,"ID","indicator",MY_MATRIX,"ID_PASS","indicator")
 My_REF <- My_Vlookup(My_REF,"ID","classif1",MY_MATRIX,"ID_PASS","classif1")
 My_REF <- My_Vlookup(My_REF,"ID","classif2",MY_MATRIX,"ID_PASS","classif2")
-My_REF <- My_Vlookup(My_REF,"ID","sex",MY_MATRIX,"ID_PASS","SEX")
+My_REF <- My_Vlookup(My_REF,"ID","sex",MY_MATRIX,"ID_PASS","Sex")
 My_REF$sex <- paste0("SEX_",My_REF$sex)
 My_REF <- My_Vlookup(My_REF,"ID","time",MY_MATRIX,"ID_PASS","Ref_Date")
 My_REF <- My_Vlookup(My_REF,"ID","freq_code",MY_MATRIX,"ID_PASS","freq_code")
